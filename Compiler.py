@@ -1,143 +1,230 @@
-from tkinter import *
-import json
-from pprint import pprint
-from Google import Create_Service
-from googleapiclient.http import MediaIoBaseDownload
-from googleapiclient.http import MediaFileUpload
-from googleapiclient.errors import HttpError
 import io
+from Google import Create_Service
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from datasets import load_dataset
 import os
+import json
+from tkinter import *
+from tkinter import messagebox
 
-# If modifying these scopes, delete the file token.json.
+FONT = ('Arial', 12)
+
+# Loading Source Dataset
+dataset = load_dataset("race", "all")
+
+# Set up Google Drive API service
 SCOPES = ['https://www.googleapis.com/auth/drive']
 CLIENT_SECRET_FILE = 'credentials.json'
 API_NAME = 'drive'
 API_VERSION = 'v3'
-folder_id = '1_EDy64e8ONe-JDUI0ltjFC-vfSfGqRW-'
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 
+# Check for the latest version of the dataset in Google Drive
+folder_id = '1_EDy64e8ONe-JDUI0ltjFC-vfSfGqRW-'
+query = f"parents = '{folder_id}'"
+response = service.files().list(q=query).execute()
+files = response.get('files')
+next_page_token = response.get('nextPageToken')
+
+while next_page_token:
+    response = service.files().list().execute()
+    files.extend(response.get('files'))
+    next_page_token = response.get('nextPageToken')
+
+files_list = []
+
+# Compile all file version names and ids in a list
+for file in files:
+    if 'aicomprehend_dataset' in file['name']:
+        files_list.append(
+            {
+                file['name'].removesuffix('.json'): file['id']
+            }
+        )
+
+file_name_list = []
+
+for file in files_list:
+    file_name_list.append(list(file.keys()))
+
+# Download the latest version of the dataset if it exists
+if not files_list:
+    aicomprehend_dataset = []
+    latest_version_file_name = 'aicomprehend_dataset_v0'
+
+else:
+    latest_version_file = [x for x in files_list if list(x.keys())[0] == max(file_name_list)[0]]
+    latest_version_file_name = max(file_name_list)[0]
+    file_name = latest_version_file_name
+    file_id = latest_version_file[0][file_name]
+
+    # Download the latest file
+    request = service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fd=fh, request=request)
+    done = False
+
+    while not done:
+        status, done = downloader.next_chunk()
+
+    fh.seek(0)
+
+    with open(os.path.join('', file_name + '.json'), 'wb') as f:
+        f.write(fh.read())
+        f.close()
+
+    # Load the latest version of the dataset
+    with open(file_name + '.json', 'r') as current_dataset:
+        aicomprehend_dataset = json.loads(current_dataset.read())
+
+# Set up the UI
 root = Tk()
-root.title("Q/A Compiler")
-# Center the window
+root.title('Data Compiler')
+width = root.winfo_screenwidth()
+height = root.winfo_screenheight()
+root.geometry("%dx%d" % (width, height))
 
-root.config(width=900, height=600, background="#263D42")
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-x = (screen_width / 2) - (900 / 2)
-y = (screen_height / 2) - (600 / 2)
-root.geometry('%dx%d+%d+%d' % (900, 600, x, y))
+# Passage Holder
+passage_holder = Canvas(width=1000, height=400, bg='black')
+passage_holder.grid(row=1, column=1, columnspan=2, pady=10, sticky='NSEW')
 
-# Create a title label
-title = Label(text="Q/A Compiler", font="Courier 40 bold", fg="#e8e4c9", bg="#263D42")
-title.grid(row=0, column=0, columnspan=4, padx=10, pady=10, sticky="NEW")
+# Passage Text
+passage_text = passage_holder.create_text(20, 20, font=('Arial', 10), fill='white', anchor='nw', width=1050)
 
-# Create a passage/question/choices/answer label
-passage_label = Label(text="Passage/Question/Choices/Answer", font="Courier 20 bold", fg="#e8e4c9", bg="#263D42")
-passage_label.grid(row=1, column=0, columnspan=4, padx=10, pady=5, sticky="NEW")
+# Question Holder
+question_holder = Canvas(width=1000, height=50, bg='black')
+question_holder.grid(row=2, column=1, columnspan=2, pady=10, sticky='NSEW')
 
-# Create a passage/question/choices/answer text box
-passage_text = Text(root, width=50, height=10, font="Courier 20 bold", bg="#e8e4c9", fg="#263D42")
-passage_text.grid(row=2, column=0, columnspan=4, padx=10, pady=(5, 30), sticky="NEW")
+# Question Text
+question_text = question_holder.create_text(20, 20, font=FONT, fill='white', anchor='nw', width=800)
+
+# Choices Holders
+choice_holder_1 = Canvas(width=390, height=100, bg='black', )
+choice_holder_2 = Canvas(width=390, height=100, bg='black', )
+choice_holder_3 = Canvas(width=390, height=100, bg='black', )
+choice_holder_4 = Canvas(width=390, height=100, bg='black', )
+choice_holder_1.grid(row=3, column=1, pady=10, sticky='NSEW')
+choice_holder_2.grid(row=3, column=2, pady=10, sticky='NSEW')
+choice_holder_3.grid(row=4, column=1, pady=10, sticky='NSEW')
+choice_holder_4.grid(row=4, column=2, pady=10, sticky='NSEW')
+
+# Choices Text
+choice_text_1 = choice_holder_1.create_text(20, 20, font=FONT, fill='white', anchor='nw', width=350)
+choice_text_2 = choice_holder_2.create_text(20, 20, font=FONT, fill='white', anchor='nw', width=350)
+choice_text_3 = choice_holder_3.create_text(20, 20, font=FONT, fill='white', anchor='nw', width=350)
+choice_text_4 = choice_holder_4.create_text(20, 20, font=FONT, fill='white', anchor='nw', width=350)
+
+# Component Entry
+component_entry = Entry(width=50)
+component_entry.grid(row=5, column=1, columnspan=1, sticky='NSW')
+
+# Labels
+passage_label = Label(text='PASSAGE')
+passage_label.grid(row=1, column=0, sticky='NSEW', pady=10, padx=10)
+
+question_label = Label(text='QUESTION')
+question_label.grid(row=2, column=0, sticky='NSEW', pady=10, padx=10)
+
+choices_label = Label(text='CHOICES')
+choices_label.grid(row=3, column=0, sticky='NSEW', pady=10, padx=10)
+
+component_label = Label(text='COMPONENT')
+component_label.grid(row=5, column=0, sticky='NSEW', pady=10, padx=10)
+
+# Upload Dataset Button
+upload_dataset_button = Button(text='Upload Dataset', bg='black', fg='white', font=('Arial', 15,), padx=10)
+upload_dataset_button.grid(row=5, column=2)
+
+# Center all elements
+root.columnconfigure(0, weight=1)
+root.columnconfigure(1, weight=1)
+root.columnconfigure(2, weight=1)
+root.columnconfigure(4, weight=1)
+
+current_index = len(aicomprehend_dataset)
+current_item = dataset['train'][current_index]
 
 
-def submit():
-    text = passage_text.get("1.0", "end-1c")
-    passage = text.split("\n")[0]
-    question = text.split("\n")[2].replace("Question: ", "")
-    choices = text.split("\n")[4:8]
-    for choice in choices:
-        index = choices.index(choice)
-        choice = choice[3:]
-        choices[index] = choice
-    answer = text.split("\n")[9]
-    answer = answer[11:]
+# Dataloader function for the UI
+def dataloader():
+    global current_item
+    current_item = dataset['train'][current_index]
+    if current_item['question'] not in aicomprehend_dataset.__str__():
+        formatted_passage_list = current_item['article'].split('\n')
+        formatted_passage = '\n\n'.join(formatted_passage_list)
+        passage_holder.itemconfig(passage_text, text=formatted_passage, )
+        question_holder.itemconfig(question_text, text=current_item['question'])
+        choice_holder_1.itemconfig(choice_text_1, text=current_item['options'][0])
+        choice_holder_2.itemconfig(choice_text_2, text=current_item['options'][1])
+        choice_holder_3.itemconfig(choice_text_3, text=current_item['options'][2])
+        choice_holder_4.itemconfig(choice_text_4, text=current_item['options'][3])
 
-    if os.path.exists('DATA.json'):
-        with open("DATA.json") as f:
-            big_data = json.load(f)
 
-    else:
-        file_name = 'DATA.json'
-        response = service.files().list(q=f"'{folder_id}' in parents").execute()
-        data_files = response.get('files', [])
-        request = service.files().get_media(fileId=data_files[0]['id'])
-        fh = io.BytesIO()
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-            print("Download %d%%." % int(status.progress() * 100))
+# Function for updating the dataset with the annotated data
+def save_annotation():
+    global current_index
 
-        fh.seek(0)
-        with open(file_name, 'wb') as f:
-            f.write(fh.read())
-            f.close()
-        with open("DATA.json") as f:
-            big_data = json.load(f)
-    if passage not in big_data.__str__():
-        data = {
-            "passage": {
-                "text": passage,
-                "questions": [
-                    {
-                        "question": question,
-                        "choices": choices,
-                        "answer": answer
-                    }
-                ]
-            },
-            "id": len(big_data)
+    if component_entry.get().lower() in ['l', 'i', 'c']:
+
+        formatted_passage_list = current_item['article'].split('\n')
+        formatted_passage = '\n\n'.join(formatted_passage_list)
+
+        if component_entry.get().lower() == 'l':
+            knowledge_component = 'literal'
+        elif component_entry.get().lower() == 'i':
+            knowledge_component = 'inferential'
+        else:
+            knowledge_component = 'critical'
+
+        data_dict = {
+            'passage': formatted_passage,
+            'question': current_item['question'],
+            'choices': current_item['options'],
+            'answer': current_item['answer'],
+            'knowledge component': knowledge_component,
+            'id': len(aicomprehend_dataset),
         }
-        with open("DATA.json", "w") as f:
-            big_data.append(data)
-            json.dump(big_data, f, indent=4, separators=(',', ': '))
-            pprint(big_data)
+
+        aicomprehend_dataset.append(data_dict)
+        save_offline()
+        current_index += 1
+        dataloader()
+
     else:
-        passage_index_in_string: object = big_data.__str__().index(passage)
-        id_index = big_data.__str__()[passage_index_in_string:].find("id")
-        passage_index = int(
-            big_data.__str__()[passage_index_in_string + id_index + 5:passage_index_in_string + id_index + 6])
-        big_data[passage_index]["passage"]["questions"].append({
-            "question": question,
-            "choices": choices,
-            "answer": answer
-        })
-        with open("DATA.json", "w") as f:
-            json.dump(big_data, f, indent=4, separators=(',', ': '))
-
-# Create an add QA button
-add_qa_button = Button(root, text="Add QA", font="Courier 20 bold", fg="#e8e4c9", bg="#263D42", command=submit)
-add_qa_button.grid(row=3, column=1, columnspan=2, padx=10, pady=5, sticky="NEW")
+        messagebox.showwarning('Invalid Input!', 'Please enter a valid input: L/I/C')
 
 
-def upload():
-    file_name = 'DATA.json'
+# Function for saving the dataset locally
+def save_offline():
+    with open('aicomprehend_dataset_v' + str(int(latest_version_file_name[-1]) + 1) + '.json', 'w+') as local_backup:
+        try:
+            aicomprehend_dataset_local_backup = [json.load(local_backup), aicomprehend_dataset]
+        except json.JSONDecodeError:
+            aicomprehend_dataset_local_backup = aicomprehend_dataset
+        json.dump(aicomprehend_dataset_local_backup, local_backup, indent=4)
+
+
+# Function for saving the dataset online to Google Drive
+def save_online():
+    save_offline()
+    if latest_version_file_name:
+        new_file_name = 'aicomprehend_dataset_v' + str(int(latest_version_file_name[-1]) + 1) + '.json'
+    else:
+        new_file_name = 'aicomprehend_dataset_v1.json'
     mimetypes = 'text/plain'
     file_metadata = {
-        'name': file_name,
+        'name': new_file_name,
         'parents': [folder_id]
     }
-    response = service.files().list(q=f"'{folder_id}' in parents").execute()
-    files = response.get('files', [])
-    for file in files:
-        try:
-            service.files().delete(fileId=file['id']).execute()
-        except HttpError:
-            pass
-    media = MediaFileUpload(file_name, mimetype=mimetypes)
+    media = MediaFileUpload(new_file_name, mimetype=mimetypes)
     service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
 
 
-# Create an Upload data button
-upload_data_button = Button(root, text="Upload Data", font="Courier 20 bold", fg="#e8e4c9", bg="#263D42",
-                            command=upload)
-upload_data_button.grid(row=4, column=1, columnspan=2, padx=10, pady=5, sticky="NEW")
+# bind the save online function to the upload button
+upload_dataset_button.config(command=save_online)
 
-# Center all the grid elements
-for i in range(4):
-    root.grid_columnconfigure(i, weight=1)
-for i in range(5):
-    root.grid_rowconfigure(i, weight=1)
-
+# main
+dataloader()
+root.bind('<Return>', lambda event: save_annotation())
 root.mainloop()
