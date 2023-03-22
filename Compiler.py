@@ -222,6 +222,8 @@ def save_online():
     }
     media = MediaFileUpload(new_file_name, mimetype=mimetypes)
     service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
+    
+    sys.exit()
 
 
 # bind the save online function to the upload button
