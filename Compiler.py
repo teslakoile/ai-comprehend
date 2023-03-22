@@ -9,9 +9,6 @@ from tkinter import messagebox
 
 FONT = ('Arial', 12)
 
-# Loading Source Dataset
-dataset = load_dataset("race", "all")
-
 # Set up Google Drive API service
 SCOPES = ['https://www.googleapis.com/auth/drive']
 CLIENT_SECRET_FILE = 'credentials.json'
@@ -77,6 +74,12 @@ else:
     # Load the latest version of the dataset
     with open(file_name + '.json', 'r') as current_dataset:
         aicomprehend_dataset = json.loads(current_dataset.read())
+        
+if len(aicomprehend_dataset) <= 150:
+    # Loading Source Dataset
+    dataset = load_dataset("race", "middle")
+else:
+    dataset = load_dataset("race", "high")
 
 # Set up the UI
 root = Tk()
