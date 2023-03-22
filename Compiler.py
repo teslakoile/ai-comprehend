@@ -1,4 +1,7 @@
 import io
+import sys
+import re
+
 from Google import Create_Service
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from datasets import load_dataset
@@ -49,12 +52,10 @@ for file in files_list:
 if not files_list:
     aicomprehend_dataset = []
     latest_version_file_name = 'aicomprehend_dataset_v0'
-
 else:
-    latest_version_file = [x for x in files_list if list(x.keys())[0] == max(file_name_list)[0]]
-    latest_version_file_name = max(file_name_list)[0]
-    file_name = latest_version_file_name
-    file_id = latest_version_file[0][file_name]
+    latest_version_file = files_list[0]
+    latest_version_file_name = list(latest_version_file.keys())[0]
+    file_id = latest_version_file[latest_version_file_name]
 
     # Download the latest file
     request = service.files().get_media(fileId=file_id)
@@ -67,14 +68,14 @@ else:
 
     fh.seek(0)
 
-    with open(os.path.join('', file_name + '.json'), 'wb') as f:
+    with open(os.path.join('', latest_version_file_name + '.json'), 'wb') as f:
         f.write(fh.read())
         f.close()
 
     # Load the latest version of the dataset
-    with open(file_name + '.json', 'r') as current_dataset:
+    with open(latest_version_file_name + '.json', 'r') as current_dataset:
         aicomprehend_dataset = json.loads(current_dataset.read())
-        
+
 if len(aicomprehend_dataset) <= 150:
     # Loading Source Dataset
     dataset = load_dataset("race", "middle")
@@ -200,7 +201,10 @@ def save_annotation():
 
 # Function for saving the dataset locally
 def save_offline():
-    with open('aicomprehend_dataset_v' + str(int(latest_version_file_name[-1]) + 1) + '.json', 'w+') as local_backup:
+    version = re.findall(r'\d+', latest_version_file_name)
+    version = ''.join(version)
+    new_file_name = 'aicomprehend_dataset_v' + str(int(version) + 1) + '.json'
+    with open(new_file_name, 'w+') as local_backup:
         try:
             aicomprehend_dataset_local_backup = [json.load(local_backup), aicomprehend_dataset]
         except json.JSONDecodeError:
@@ -212,7 +216,9 @@ def save_offline():
 def save_online():
     save_offline()
     if latest_version_file_name:
-        new_file_name = 'aicomprehend_dataset_v' + str(int(latest_version_file_name[-1]) + 1) + '.json'
+        version = re.findall(r'\d+', latest_version_file_name)
+        version = ''.join(version)
+        new_file_name = 'aicomprehend_dataset_v' + str(int(version) + 1) + '.json'
     else:
         new_file_name = 'aicomprehend_dataset_v1.json'
     mimetypes = 'text/plain'
@@ -222,7 +228,7 @@ def save_online():
     }
     media = MediaFileUpload(new_file_name, mimetype=mimetypes)
     service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
-    
+
     sys.exit()
 
 
