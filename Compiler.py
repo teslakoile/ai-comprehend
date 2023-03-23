@@ -157,7 +157,7 @@ current_item = dataset['test'][current_index]
 # Dataloader function for the UI
 def dataloader():
     global current_item
-    current_item = dataset['train'][current_index]
+    current_item = dataset['test'][current_index]
     if current_item['question'] not in aicomprehend_dataset.__str__():
         formatted_passage_list = current_item['article'].split('\n')
         formatted_passage = '\n\n'.join(formatted_passage_list)
