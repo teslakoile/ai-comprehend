@@ -76,7 +76,8 @@ else:
     with open(latest_version_file_name + '.json', 'r') as current_dataset:
         aicomprehend_dataset = json.loads(current_dataset.read())
 
-if len(aicomprehend_dataset) <= 150:
+if len(aicomprehend_dataset) < 150:
+    print(len(aicomprehend_dataset))
     # Loading Source Dataset
     dataset = load_dataset("race", "middle")
 else:
@@ -146,8 +147,11 @@ root.columnconfigure(1, weight=1)
 root.columnconfigure(2, weight=1)
 root.columnconfigure(4, weight=1)
 
-current_index = len(aicomprehend_dataset)
-current_item = dataset['train'][current_index]
+if len(aicomprehend_dataset) < 150:
+    current_index = len(aicomprehend_dataset)
+else:
+    current_index = 1
+current_item = dataset['test'][current_index]
 
 
 # Dataloader function for the UI
