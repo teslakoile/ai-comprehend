@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div id="login-left-bg">
+    <div id="text-content">
+      <h1 id="left-title">Adventure Starts Here</h1>
+      <h2 id="left-paragraph">Create an account to join our community of readers and learners!</h2>
+    </div>
+  </div>
+
+  <!-- Right Part -->
+  <div class="form-content">
+
+    {% for message in messages %}
+    <div class="{% if message.tags %}alert-{{ message.tags }}{% endif %}">
+        <span class="alert-message">
+            {{ message }}
+        </span>
+    </div>
+    {% endfor %}
+
+    <img src="{% static 'mysite/logo-icon.png' %}" id="icon" width="120px" height="auto">
+    <h1 id="login-title"> Hello! Welcome Back</h1>
+    <form method="post">
+      {% csrf_token %}
+      <label for="email">Email:</label><br>
+
+      <div class="input-field">
+        <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+        <img src="{% static 'mysite/email-icon.png' %}">
+      </div>     
+  
+      <label for="password">Password:</label><br>
+      <div class="input-field">
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
+        <img src="{% static 'mysite/password-icon.png' %}">
+      </div>
+  
+      <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="{% url 'register' %}" id="link-text">Register here</a></p>
+  </div>
+  
+{% endblock %}
