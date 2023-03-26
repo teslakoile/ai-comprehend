@@ -1,0 +1,254 @@
+/* Left side of signup page */
+#signup-left-bg{
+    position: absolute;
+    width: 755px;
+    height: 870px;
+    left: 0px;
+    top: 0px;
+    background-image: url("signup-left-splash.png");
+    background-size: cover;
+    /* background: #6441EF; */
+}
+
+#login-left-bg{
+    position: absolute;
+    width: 755px;
+    height: 870px;
+    left: 0px;
+    top: 0px;
+    background-image: url("login-left-splash.png");
+    background-size: cover;
+    /* background: #6441EF; */
+}
+
+#text-content{
+    margin: 0px;
+    padding-left: 120px;
+    padding-right: 120px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+#left-title{
+    padding-top: 320px;
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 700;
+    font-size: 64px;
+    line-height: 70px;
+    margin: 0px;
+    /* or 125% */
+    
+    color: #FFFFFF;
+}
+#left-paragraph{    
+    padding-top: 20px;
+    margin-right: 50px;
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 24px;
+    line-height: 34px;
+    
+    color: #FFFFFF;
+}
+
+/* Right side of signup page */
+.form-content{
+    position: absolute;
+    width: 756px;
+    height: 870px;
+    left: 756px;
+    top: 0px;
+    
+    background: #FFFFFF;
+}
+#icon{
+    padding-top: 80px;
+    margin: auto;
+    display: flex;
+}
+#signup-title{
+    padding-top: 100px;
+    text-align: center;
+
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 24px;
+    line-height: 33px;
+    /* identical to box height */
+    
+    
+    color: #231F20;
+}
+#login-title{
+    padding-top: 20px;
+    text-align: center;
+
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 24px;
+    line-height: 33px;
+    /* identical to box height */
+    
+    
+    color: #231F20;
+}
+
+label, h1, p{
+    font-family: 'Open Sans';
+}
+
+p{
+    text-align: center;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 22px;
+    /* identical to box height */
+
+    color: #231F20;
+}
+
+label{
+    padding-left: 130px;
+
+    font-style: normal;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 27px;
+    
+    color: #231F20;
+}
+.input-field{
+    position: relative; 
+    width:390px;
+}
+.input-field img { 
+    position: absolute; 
+    top: 37px; 
+    left: 157px;
+
+    width: 30px;
+    height: 30px;
+}
+input{
+    margin-left: 130px;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    padding: 20px 20px 20px 70px;
+
+    width: 390px;
+    height: 32px;
+
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 27px;
+    
+    color: #C8C8C8;
+    
+    background: #FFFFFF;
+    box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    border-color: transparent;
+}
+button{
+    margin-left: 130px;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    padding: 0px;
+
+    width: 482px;
+    height: 72px;
+
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 20px;
+    
+    color: #FFFFFF;
+    
+    
+    background: #6441EF;
+    box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+
+    border-color: transparent;
+}
+
+/* .alert {
+  padding: 15px;
+  margin: 15px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: -50px;
+} */
+
+.alert-message {
+  margin: 0;
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+}
+
+.alert-error {
+  padding: 15px;
+  margin: 15px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: -50px;
+  color: #A94442;
+  background-color: #F2DEDE;
+  border-color: #EBCCD1;
+}
+
+/* .alert-error .alert-message {
+  color: #A94442;
+} */
+
+
+.alert-success {
+  padding: 15px;
+  margin: 15px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: -50px;
+  color: #155724;
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.alert-success .alert-message {
+  color: #155724; /* Change the font color of the message inside the alert-success */
+}
+
+
+::placeholder {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 27px;
+    
+    color: #C8C8C8;
+  }
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+#link-text{
+    color:#6441EF
+}
