@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+{% load custom_filters %}
+
+  <h2>Passage:</h2>
+  <p>{{ question.passage }}</p>
+
+  <h2>Question:</h2>
+  <p>{{ question.question_text }}</p>
+
+  <form id="answer-form" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="selected_choice" id="selected_choice" value="">
+    
+    <script>
+    function handleChoiceClick(button) {
+        let choiceButtons = document.getElementsByClassName('choice-btn');
+        let submitButton = document.getElementById('submit-btn');
+        
+        // If the button is already selected, deselect it
+        if (button.classList.contains('selected')) {
+            button.classList.remove('selected');
+            submitButton.disabled = true;
+            return;
+        }
+        
+        // Clear previous selection
+        for (let i = 0; i < choiceButtons.length; i++) {
+            choiceButtons[i].classList.remove('selected');
+        }
+        
+        // Highlight the selected button
+        button.classList.add('selected');
+        submitButton.disabled = false;
+        document.getElementById('selected_choice').value = button.innerText;
+    }
+
+    function handleSubmit(event) {
+    event.preventDefault();
+    let nextButton = document.getElementById('next-btn');
+    let resultMessage = document.getElementById('result-message');
+    let answer = document.querySelector('.selected').innerText;
+    let correctAnswer = "{{ question.choices|get_item:question.answer }}";
+    let correctChoice = "{{ question.choices|get_item:question.answer }}";
+
+    if (answer === correctAnswer) {
+        resultMessage.innerText = "Correct!";
+    } else {
+        resultMessage.innerText = "Incorrect! The correct answer is: " + correctChoice;
+    }
+    nextButton.disabled = false;
+
+    let questionId = "{{ question.id }}";
+    updateUserAnswer(questionId, answer); // Call the updateUserAnswer function here
+}
+
+
+function updateUserAnswer(questionId, selectedAnswer) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            console.log("UserAnswer updated");
+        } else if (this.readyState === 4) {
+            console.log("Error updating UserAnswer");
+        }
+    };
+
+    xhttp.open("POST", "/update_user_answer/", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest"); // Make sure to include this header
+    xhttp.setRequestHeader("X-CSRFToken", csrftoken);
+    xhttp.send(`question_id=${questionId}&selected_answer=${selectedAnswer}`);
+}
+
+
+
+
+
+
+    document.getElementById('answer-form').addEventListener('submit', handleSubmit);
+    </script>
+
+    <h3>Choices:</h3>
+    {% for choice in question.choices %}
+    <button type="button" class="choice-btn" onclick="handleChoiceClick(this)">{{ choice }}</button>
+    {% endfor %}
+
+    <button type="submit" id="submit-btn" disabled>Submit</button>
+    <p id="result-message"></p>
+  </form>
+
+  <br>
+  <button id="next-btn" onclick="handleNextClick()" disabled>Next</button>
+
+    <script>
+        function handleNextClick() {
+            window.location.href = "{% url 'test' %}";
+        }
+    </script>
+{% endblock %}

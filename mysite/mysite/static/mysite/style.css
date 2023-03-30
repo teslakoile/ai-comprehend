@@ -178,15 +178,10 @@ button{
 
     border-color: transparent;
 }
-
-/* .alert {
-  padding: 15px;
-  margin: 15px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-bottom: -50px;
-} */
+.choice-btn.selected {
+    background-color: #f1c40f; /* Change to your desired background color */
+    color: #ffffff; /* Change to your desired font color */
+}
 
 .alert-message {
   margin: 0;
@@ -207,10 +202,6 @@ button{
   background-color: #F2DEDE;
   border-color: #EBCCD1;
 }
-
-/* .alert-error .alert-message {
-  color: #A94442;
-} */
 
 
 .alert-success {
