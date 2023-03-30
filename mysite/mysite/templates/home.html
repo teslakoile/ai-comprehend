@@ -4,4 +4,23 @@
 
 <h1>Hi {{ user.email }}!</h1>
 
+{% if user.is_authenticated %}
+    <button onclick="handleTestClick()">Test</button>
+
+    <script>
+        function handleTestClick() {
+            window.location.href = "{% url 'test' %}";
+        }
+    </script>
+
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+  </form>
+
+  <br><br>
+    
+{% endif %}
+
+
 {% endblock %} 
