@@ -55,7 +55,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'mysite/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -130,3 +130,6 @@ STATICFILES_DIRS = [
 ]
 
 LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = LOGIN_URL
+
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
