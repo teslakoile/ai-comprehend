@@ -16,6 +16,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from . import views
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.views import LogoutView
+from django.contrib import messages
+
+
+class CustomLogoutView(LogoutView):
+    def dispatch(self, request, *args, **kwargs):
+        messages.success(request, "You have successfully logged out.")
+        return super().dispatch(request, *args, **kwargs)
+
 
 urlpatterns = [
     path('register/', views.register, name='register'),
@@ -23,5 +33,11 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('admin/', admin.site.urls),
     path('home/', views.home, name='home'),
+    path('logout/', CustomLogoutView.as_view(), name='logout'),
+    path('test/', views.test, name='test'),
+    path('update_user_answer/', views.update_user_answer, name='update_user_answer'),
+    path('user_history/<str:username>/', views.get_user_history, name='user_history'),
+    path('all_users_history/', views.get_all_users_history, name='all_users_history'),
+
 ]
 
