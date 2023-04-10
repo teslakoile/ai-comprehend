@@ -2,25 +2,29 @@
 {% load static %}
 {% block content %}
 
-<h1>Hi {{ user.email }}!</h1>
-
 {% if user.is_authenticated %}
-    <button onclick="handleTestClick()">Test</button>
+<div class="navbar">
+    <div class="nav-logo"><img src="{% static 'mysite/logo.png' %}" width="250px", height="auto"></div>
+    <div class="nav-links">
+        <a class="nav-link" href="{% url 'home' %}"><span class="active-page">Home</span></a>
+        <a class="nav-link" href="{% url 'test' %}">Test</a>
+        <a class="nav-link" href="{% url 'logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+        <form id="logout-form" method="post" action="{% url 'logout' %}" style="display:none;">
+            {% csrf_token %}
+        </form>
+    </div>
+</div>
 
-    <script>
-        function handleTestClick() {
-            window.location.href = "{% url 'test' %}";
-        }
-    </script>
+<div id="home-content">
+    <!-- Empty body -->
+    <div class="text-container">
+        <h1 id="home-header">Improve your reading comprehension skills with AIComprehend!</h1>
+        <p id="home-paragraph">Unleash your inner reading champion with AIComprehend! Our app uses machine learning to customize reading materials for you, with curated and engaging passages and questions. Try it now and discover the joy of learning!</p>
+        <a href="https://www.youtube.com/watch?v=W7BW9gv_OkU"><button id="home-button">Watch the tutorial</button></a>
+    </div>
 
-  <form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit">Logout</button>
-  </form>
-
-  <br><br>
-    
+    <img src="{% static 'mysite/home-splash-2.png' %}" class="home-splash">
+</div>
 {% endif %}
 
-
-{% endblock %} 
+{% endblock %}
