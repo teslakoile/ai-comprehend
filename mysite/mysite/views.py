@@ -60,6 +60,8 @@ def test(request):
     user = request.user
     answered_questions = UserAnswer.objects.filter(user=user).values_list('question_id', flat=True)
     unanswered_questions = Question.objects.exclude(id__in=answered_questions)
+    questions_count = Question.objects.count()
+    answered_questions_count = answered_questions.count()
 
     if unanswered_questions:
         question = random.choice(unanswered_questions)
@@ -69,9 +71,10 @@ def test(request):
             user_answer = UserAnswer(user=request.user, question=question, answer=selected_choice)
             user_answer.save()
 
-        return render(request, 'test.html', {'question': question})
+        return render(request, 'test.html', {'question': question, 'questions_count': questions_count, 'answered_questions_count': answered_questions_count})
     else:
         return render(request, 'done.html')
+
     
 
 def success(request):
