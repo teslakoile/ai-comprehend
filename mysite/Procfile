@@ -1,1 +1,1 @@
-web: gunicorn ai-comprehend.wsgi
+web: gunicorn mysite.wsgi
