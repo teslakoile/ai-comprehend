@@ -1,1 +1,1 @@
-web: gunicorn ai-comprehend.wsgi --log-file -
+web: gunicorn ai-comprehend.wsgi
