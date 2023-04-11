@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <body width="1512px" heigh="870px">
+    <div id="signup-left-bg">
+      <div id="text-content">
+        <h1 id="left-title">AIComprehend</h1>
+        <h2 id="left-paragraph">Improve your reading comprehension skills right now for free!</h2>
+      </div>
+    </div>
+
+    <div class="form-content">
+        {% for message in messages %}
+        <div class="{% if message.tags %}alert-{{ message.tags }}{% endif %}">
+            <span class="alert-message">
+                {{ message }}
+            </span>
+        </div>
+        {% endfor %}
+
+      <!-- <img src="media/logo-icon.png" id="icon" width="120px" height="auto"> -->
+      <h1 id="signup-title"> Create your account!</h1>
+      <form method="post" action="{% url 'register' %}">
+        {% csrf_token %}
+        <label for="email">Email:</label><br>
+        <div class="input-field">
+          <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+          <img src="{% static 'mysite/email-icon.png' %}">
+        </div>      
+  
+        <label for="password">Password:</label><br>
+        <div class="input-field">
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+          <img src="{% static 'mysite/password-icon.png' %}">
+        </div>
+        
+        <label for="confirm_password">Confirm Password:</label><br>
+        <div class="input-field">
+          <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
+          <img src="{% static 'mysite/password-icon.png' %}">
+        </div>
+  
+        <button type="submit" value="Sign Up">Register</button>
+      </form>
+      <p>Already have an account? <a href="{% url 'login' %}" id="link-text">Login here</a></p>
+    </div>
+    
+  </body>
+
+{% endblock %}

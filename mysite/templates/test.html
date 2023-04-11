@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+{% load custom_filters %}
+<div class="navbar">
+    <div class="nav-logo"><img src="{% static 'mysite/logo.png' %}" width="250px", height="auto"></div>
+    <div class="nav-links">
+        <a class="nav-link" href="{% url 'home' %}">Home</a>
+        <a class="nav-link" href="{% url 'test' %}"><span class="active-page">Test</span></a>
+        <a class="nav-link" href="{% url 'logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+        <form id="logout-form" method="post" action="{% url 'logout' %}" style="display:none;">
+            {% csrf_token %}
+        </form>
+    </div>
+</div>
+<div class="progress-container">
+    <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+  </div>
+  <script>
+    const answeredQuestionsCount = "{{ answered_questions_count }}";
+    const totalQuestionsCount = "{{ questions_count }}";
+  
+    function updateProgressBar() {
+      const progressBar = document.getElementById('progress-bar');
+      const progress = (answeredQuestionsCount / totalQuestionsCount) * 100;
+  
+      progressBar.style.width = progress + '%';
+    }
+  
+    updateProgressBar();
+  </script>
+<div class="test-content">
+    <button id="exit-btn" onclick="handleExitClick()" class="exit-btn">X</button>
+
+    <h3>Question {{ user.useranswer_set.count|add:"1" }}/{{ questions_count }}</h3>
+    <p id="passage">{{ question.passage }}</p>
+
+  <!-- <h3>Question:</h3> -->
+  <p id="question">{{ question.question_text }}</p>
+
+  <form id="answer-form" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="selected_choice" id="selected_choice" value="">
+    
+    <script>
+    function handleExitClick() {
+        window.location.href = "{% url 'home' %}";
+    }
+
+        
+    let submitted = false;
+
+    function handleChoiceClick(button) {
+        if (submitted) {
+            return;
+        }
+
+        let choiceButtons = document.getElementsByClassName('choice-btn');
+        let submitButton = document.getElementById('submit-btn');
+        
+        // If the button is already selected, deselect it
+        if (button.classList.contains('selected')) {
+            button.classList.remove('selected');
+            submitButton.disabled = true;
+            return;
+        }
+        
+        // Clear previous selection
+        for (let i = 0; i < choiceButtons.length; i++) {
+            choiceButtons[i].classList.remove('selected');
+        }
+        
+        // Highlight the selected button
+        button.classList.add('selected');
+        submitButton.disabled = false;
+        document.getElementById('selected_choice').value = button.innerText;
+    }
+    
+    function handleSubmit(event) {
+        event.preventDefault();
+        let nextButton = document.getElementById('next-btn');
+        let submitButton = document.getElementById('submit-btn');
+        let resultMessage = document.getElementById('result-message');
+        let answer = document.querySelector('.selected').innerText;
+        let correctAnswer = "{{ question.choices|get_item:question.answer|force_escape }}";
+        let correctChoice = "{{ question.choices|get_item:question.answer|force_escape }}";
+
+        let alertDiv = document.createElement('div');
+        alertDiv.classList.add('alert-message');
+
+        if (answer === correctAnswer) {
+            alertDiv.innerText = "Correct!";
+            alertDiv.classList.add('alert-success');
+        } else {
+            alertDiv.innerHTML = "Incorrect! The correct answer is: " + unescape(correctChoice);
+            alertDiv.classList.add('alert-error');
+        }
+        
+        resultMessage.innerHTML = '';
+        resultMessage.appendChild(alertDiv);
+        nextButton.disabled = false;
+
+        let questionId = "{{ question.id }}";
+        updateUserAnswer(questionId, answer); // Call the updateUserAnswer function here
+
+        // Disable the submit button
+        submitButton.disabled = true;
+        submitted = true;
+    }
+
+
+
+
+function updateUserAnswer(questionId, selectedAnswer) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            console.log("UserAnswer updated");
+        } else if (this.readyState === 4) {
+            console.log("Error updating UserAnswer");
+        }
+    };
+
+    xhttp.open("POST", "/update_user_answer/", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest"); // Make sure to include this header
+    xhttp.setRequestHeader("X-CSRFToken", csrftoken);
+    xhttp.send(`question_id=${questionId}&selected_answer=${selectedAnswer}`);
+}
+
+
+    document.getElementById('answer-form').addEventListener('submit', handleSubmit);
+
+    </script>
+
+    <div class="choice-container">
+        {% for choice in question.choices|slice:":2" %}
+        <div class="choice-item">
+            <button type="button" class="choice-btn" onclick="handleChoiceClick(this)">{{ choice }}</button>
+        </div>
+        {% endfor %}
+        {% for choice in question.choices|slice:"2:" %}
+        <div class="choice-item">
+            <button type="button" class="choice-btn" onclick="handleChoiceClick(this)">{{ choice }}</button>
+        </div>
+        {% endfor %}
+    </div>
+
+
+    <!-- <div class="alert-error"> -->
+        <div id="result-container">
+            <div id="result-message"></div>
+            <div id="action-buttons">
+                <button type="submit" id="submit-btn" disabled>Submit Answer</button>
+                <button id="next-btn" onclick="handleNextClick()" disabled>Next</button>
+            </div>
+            
+        </div>
+        
+    <!-- </div> -->
+    
+
+    
+    
+  </form>
+  
+
+    <script>
+        function handleNextClick() {
+            window.location.href = "{% url 'test' %}";
+        }
+    </script>
+
+</div>
+
+    
+{% endblock %}
