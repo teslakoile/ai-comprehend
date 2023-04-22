@@ -272,3 +272,10 @@ def get_all_users_history(request):
 @staff_member_required
 def admin_dashboard(request):
     return render(request, 'admin_dashboard.html')
+
+def user_is_authenticated(user):
+    return user.is_authenticated
+
+@user_passes_test(user_is_authenticated, login_url='/login/')
+def index(request):
+    return redirect('/home/')

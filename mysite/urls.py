@@ -29,6 +29,7 @@ class CustomLogoutView(LogoutView):
 
 urlpatterns = [
     path('register/', views.register, name='register'),
+    path('', views.index, name='index'),
     path('success/', views.success, name='success'),
     path('login/', views.login_view, name='login'),
     path('admin/', admin.site.urls),
