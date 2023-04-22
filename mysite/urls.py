@@ -38,6 +38,7 @@ urlpatterns = [
     path('update_user_answer/', views.update_user_answer, name='update_user_answer'),
     path('user_history/<str:username>/', views.get_user_history, name='user_history'),
     path('all_users_history/', views.get_all_users_history, name='all_users_history'),
+    path('next_question/', views.next_question, name='next_question'),
 
 ]
 

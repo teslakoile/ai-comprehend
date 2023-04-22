@@ -17,6 +17,11 @@ json_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 
 with open(json_file_path, 'r') as f:
     data = json.load(f)
 
+print(f"Loaded {len(data)} items from JSON file")
+
+success_count = 0
+error_count = 0
+
 for item in data:
     try:
         mymodel_instance = Question()
@@ -31,7 +36,10 @@ for item in data:
         mymodel_instance.dc_score = item['dc_score']
         mymodel_instance.difficulty_score = item['difficulty_score']
         mymodel_instance.save()
+        success_count += 1
 
     except KeyError as e:
+        error_count += 1
         print(f"KeyError: {e} in item with id: {item['id']}")
 
+print(f"Successfully added {success_count} items, encountered errors in {error_count} items")
