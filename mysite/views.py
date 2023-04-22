@@ -19,7 +19,6 @@ import json
 from random import choice
 from scipy.special import expit
 
-
 # Load the necessary data and define the StudentModel class
 with open('mysite/train/parameters.txt') as file:
     DEFAULT_PARAMETERS = file.read().replace('[', '').replace(']', '').replace('\n', ', ').replace(' ', '').split(',')
@@ -104,6 +103,7 @@ class StudentModel:
                                    MASTER_DATA[i]["knowledge_component"] == next_knowledge_component])
 
         return next_question_id['id']
+
     
 @login_required
 def next_question(request):
@@ -167,26 +167,22 @@ def login_view(request):
 def test(request):
     user = request.user
     answered_questions = UserAnswer.objects.filter(user=user).values_list('question_id', flat=True)
-    unanswered_questions = Question.objects.exclude(id__in=answered_questions)
     questions_count = Question.objects.count()
     answered_questions_count = answered_questions.count()
 
     print(f"Total questions in the database: {questions_count}")
     print(f"Answered questions by the user: {answered_questions_count}")
 
+    # Get the next question based on the student model
+    next_question_id = json.loads(next_question(request).content)['next_question_id']
+    question = Question.objects.get(id=next_question_id)
 
-    if unanswered_questions:
-        question = random.choice(unanswered_questions)
+    if request.method == 'POST':
+        selected_choice = request.POST['selected_choice']
+        user_answer = UserAnswer(user=request.user, question=question, answer=selected_choice)
+        user_answer.save()
 
-        if request.method == 'POST':
-            selected_choice = request.POST['selected_choice']
-            user_answer = UserAnswer(user=request.user, question=question, answer=selected_choice)
-            user_answer.save()
-
-        return render(request, 'test.html', {'question': question, 'questions_count': questions_count, 'answered_questions_count': answered_questions_count})
-    else:
-        return render(request, 'done.html')
-
+    return render(request, 'test.html', {'question': question, 'questions_count': questions_count, 'answered_questions_count': answered_questions_count})
     
 
 def success(request):
