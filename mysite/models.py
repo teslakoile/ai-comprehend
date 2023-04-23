@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+
 
 class Question(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -24,6 +26,7 @@ class UserAnswer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     answer = models.CharField(max_length=1)
     correct = models.BooleanField(default=False)
+    submission_time = models.DateTimeField(default=timezone.now)
 
     class Meta:
         unique_together = ('user', 'question')

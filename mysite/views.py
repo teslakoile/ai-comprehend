@@ -219,7 +219,7 @@ def update_user_answer(request):
         # Update or create the UserAnswer
         user_answer, created = UserAnswer.objects.update_or_create(
             user_id=user_id, question_id=question_id,
-            defaults={'answer': selected_answer_letter, 'correct': is_correct} # Update the 'correct' field here
+            defaults={'answer': selected_answer_letter, 'correct': is_correct, 'submission_time': timezone.now()} # Add 'submission_time' field here
         )
         user_answer.save()
 
