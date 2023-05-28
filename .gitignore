@@ -1,2 +1,4 @@
 .DS_Store
 .env
+scripts/refine_relevant_sentences.py
+scripts/update_questions.py
