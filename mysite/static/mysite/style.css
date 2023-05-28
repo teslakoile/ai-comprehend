@@ -553,3 +553,7 @@ button:disabled{
     justify-content: flex-end;
     
 }
+
+.highlight {
+    background-color: yellow;
+}

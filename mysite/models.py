@@ -14,6 +14,7 @@ class Question(models.Model):
     choices_in_complete_thought = models.JSONField(default=list)
     dc_score = models.FloatField(default=0.0)
     difficulty_score = models.FloatField(default=0.0)
+    explanation = models.TextField(default='')
 
     def __str__(self):
         return self.question_text

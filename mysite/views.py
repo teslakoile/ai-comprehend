@@ -171,19 +171,24 @@ def test(request):
     questions_count = Question.objects.count()
     answered_questions_count = answered_questions.count()
 
-    print(f"Total questions in the database: {questions_count}")
-    print(f"Answered questions by the user: {answered_questions_count}")
-
     # Get the next question based on the student model
     next_question_id = json.loads(next_question(request).content)['next_question_id']
     question = Question.objects.get(id=next_question_id)
+    choices = json.dumps(question.choices)
+    relevant_sentences = json.dumps(question.relevant_sentences)
 
     if request.method == 'POST':
         selected_choice = request.POST['selected_choice']
         user_answer = UserAnswer(user=request.user, question=question, answer=selected_choice)
         user_answer.save()
 
-    return render(request, 'test.html', {'question': question, 'questions_count': questions_count, 'answered_questions_count': answered_questions_count})
+    return render(request, 'test.html', {
+        'question': question, 
+        'choices': choices,
+        'relevant_sentences': relevant_sentences,
+        'questions_count': questions_count, 
+        'answered_questions_count': answered_questions_count
+    })
     
 
 def success(request):
