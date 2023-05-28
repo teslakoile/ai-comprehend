@@ -1,5 +1,7 @@
 # AI Comprehend
 
+[Link to the deployed application](https://ai-comprehend.herokuapp.com/)
+
 AI Comprehend is a web application developed as part of an undergraduate research project at the Ubiquitous Computing Laboratory in the Electrical and Electronics Engineering Institute (EEEI), University of the Philippines Diliman. The project aims to help users improve their comprehension skills using an adaptive learning system. The system provides questions based on the user's performance and learning progress to help them master various knowledge components.
 
 This project is supervised by Dr. Nestor Tiglao, with team members Kyle Nathan Naranjo, Dominic Mondia, and Stephen Galamay.
