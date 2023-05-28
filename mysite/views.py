@@ -14,7 +14,6 @@ from django.http import JsonResponse
 from django.core import serializers
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
-from django.utils import timezone
 
 import json
 from random import choice
