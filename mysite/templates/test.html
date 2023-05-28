@@ -3,6 +3,26 @@
 {% block content %}
 {% load custom_filters %}
 
+<style>
+    .highlight {
+        background-color: yellow;
+    }
+    .correct {
+        background-color: #2ecc71;
+        border: 2px solid #15B358;
+        color: #ffffff;
+    }
+    .incorrect {
+        background-color: #e74c3c;
+        border: 2px solid #CE3323;
+        color: #ffffff;
+    }
+    .relevant-sentences ul {
+        margin-top: 0;
+    }
+</style>
+<script src="https://unpkg.com/compromise"></script>
+
 <div class="navbar">
     <div class="nav-logo"><img src="{% static 'mysite/logo.png' %}" width="250px", height="auto"></div>
     <div class="nav-links">
@@ -18,8 +38,8 @@
     <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
   </div>
   <script>
-    const answeredQuestionsCount = "{{ answered_questions_count }}";
-    const totalQuestionsCount = "{{ questions_count }}";
+    const answeredQuestionsCount = parseInt("{{ answered_questions_count }}");
+    const totalQuestionsCount = parseInt("{{ questions_count }}");
   
     function updateProgressBar() {
       const progressBar = document.getElementById('progress-bar');
@@ -29,7 +49,7 @@
     }
   
     updateProgressBar();
-  </script>
+</script>
 <div class="test-content">
     <button id="exit-btn" onclick="handleExitClick()" class="exit-btn">X</button>
 
@@ -69,14 +89,67 @@
         // Clear previous selection
         for (let i = 0; i < choiceButtons.length; i++) {
             choiceButtons[i].classList.remove('selected');
+            choiceButtons[i].classList.remove('correct');
+            choiceButtons[i].classList.remove('incorrect');
         }
         
         // Highlight the selected button
         button.classList.add('selected');
+        selectedButton = button;
         submitButton.disabled = false;
         document.getElementById('selected_choice').value = button.innerText;
     }
-    
+
+    function highlightPassage(relevant_sentences) {
+        let passageElement = document.getElementById('passage');
+        let passageText = passageElement.innerText;
+
+        // Helper function for processing each sentence synchronously
+        function processSentence(sentence) {
+            let sentences = nlp(sentence).sentences().out('text');
+            return sentences;
+        }
+
+        // Split each relevant sentence into separate sentences
+        let allRelevantSentences = relevant_sentences.flatMap(sentence => processSentence(sentence));
+
+        // For each relevant sentence
+        for (let j = 0; j < allRelevantSentences.length; j++) {
+            let relevantSentence = allRelevantSentences[j];
+
+            let maxMatchCount = 0;
+            let maxMatchStart = 0;
+
+            // Slide a window of the length of the relevant sentence across the passage
+            for (let start = 0; start <= passageText.length - relevantSentence.length; start++) {
+                let matchCount = 0;
+
+                // Count the matching characters in this window
+                for (let i = 0; i < relevantSentence.length; i++) {
+                    if (passageText[start + i].toLowerCase() === relevantSentence[i].toLowerCase()) {
+                        matchCount++;
+                    }
+                }
+
+                // Update the maximum match if this window is better
+                if (matchCount > maxMatchCount) {
+                    maxMatchCount = matchCount;
+                    maxMatchStart = start;
+                }
+            }
+
+            // Highlight the part of the passage that had the maximum match to the relevant sentence
+            let before = passageText.slice(0, maxMatchStart);
+            let match = passageText.slice(maxMatchStart, maxMatchStart + relevantSentence.length);
+            let after = passageText.slice(maxMatchStart + relevantSentence.length);
+            passageText = before + '<span class="highlight">' + match + '</span>' + after;
+        }
+
+        // Update the current passage with the new highlighted text
+        passageElement.innerHTML = passageText;
+    }
+
+
     function handleSubmit(event) {
         event.preventDefault();
         let nextButton = document.getElementById('next-btn');
@@ -85,29 +158,87 @@
         let answer = document.querySelector('.selected').innerText;
         let correctAnswer = "{{ question.choices|get_item:question.answer|force_escape }}";
         let correctChoice = "{{ question.choices|get_item:question.answer|force_escape }}";
+        let explanation_str = "{{ question.explanation|escapejs|safe }}";
+        let choiceButtons = document.getElementsByClassName('choice-btn');
+
+        let relevant_sentences_str = "{{ question.relevant_sentences|escapejs|safe }}";
+        let relevant_sentences_raw = eval(relevant_sentences_str);
+        let relevant_sentences = [];
+
+        for (let i = 0; i < relevant_sentences_raw.length; i++) {
+            let sentence = relevant_sentences_raw[i];
+            if (sentence[0] === '"' && sentence[sentence.length - 1] === '"') {
+                sentence = sentence.slice(1, -1);
+            }
+            let doc = nlp(sentence);
+            relevant_sentences = relevant_sentences.concat(doc.sentences().out('array'));
+        }
+
+        highlightPassage(relevant_sentences);
 
         let alertDiv = document.createElement('div');
         alertDiv.classList.add('alert-message');
 
         if (answer === correctAnswer) {
-            alertDiv.innerText = "Correct!";
+            selectedButton.classList.remove('selected');
+            selectedButton.classList.add('correct');
+            alertDiv.innerHTML = '<strong>Correct!</strong><br>';
             alertDiv.classList.add('alert-success');
         } else {
-            alertDiv.innerHTML = "Incorrect! The correct answer is: " + unescape(correctChoice);
+            selectedButton.classList.remove('selected');
+            selectedButton.classList.add('incorrect');
+
+            // To color the correct choice green
+            for (let i = 0; i < choiceButtons.length; i++) {
+                if (choiceButtons[i].innerText === correctChoice) {
+                    choiceButtons[i].classList.add('correct');
+                    break;
+                }
+            }
+
+            alertDiv.innerHTML = '<strong>Incorrect! The correct answer is: ' + unescape(correctChoice) + '</strong><br>';
             alertDiv.classList.add('alert-error');
         }
-        
+
+        alertDiv.appendChild(document.createElement('br'));
+
+        if (explanation_str) {
+            let explanationDiv = document.createElement('div');
+            explanationDiv.classList.add('explanation');
+            explanationDiv.innerHTML = '<strong>Explanation:</strong> ' + explanation_str;
+            alertDiv.appendChild(explanationDiv);
+            alertDiv.appendChild(document.createElement('br'));
+        }
+
+        if (relevant_sentences_str) {
+            let relevantDiv = document.createElement('div');
+            relevantDiv.classList.add('relevant-sentences');
+            relevantDiv.innerHTML = '<strong>Relevant Sentences:</strong> ';
+            let ulElement = document.createElement('ul');
+            for (let i = 0; i < relevant_sentences.length; i++) {
+                let liElement = document.createElement('li');
+                let sentence = relevant_sentences[i];
+                if (relevant_sentences_raw.includes('"' + sentence + '"')) {
+                    sentence = '"' + sentence + '"';
+                }
+                liElement.textContent = sentence;
+                ulElement.appendChild(liElement);
+            }
+            relevantDiv.appendChild(ulElement);
+            alertDiv.appendChild(relevantDiv);
+        }
+
         resultMessage.innerHTML = '';
         resultMessage.appendChild(alertDiv);
         nextButton.disabled = false;
 
         let questionId = "{{ question.id }}";
-        updateUserAnswer(questionId, answer); // Call the updateUserAnswer function here
+        updateUserAnswer(questionId, answer);
 
-        // Disable the submit button
         submitButton.disabled = true;
         submitted = true;
     }
+
 
 
 
