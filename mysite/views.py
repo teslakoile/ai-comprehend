@@ -167,7 +167,9 @@ class StudentModel:
                 self.in_review = True
                 self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in [q['question_id'] for q in self.student_history]]
                 next_question_id = sample(self.remaining_question_ids, 1)[0]
-                self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+                if next_question_id in self.remaining_question_ids:
+                    self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+
             elif len(self.mastered_components) == 3:
                 next_question_id = self.diagnostic_ids[len(self.recent_history)]
             else:
@@ -175,7 +177,8 @@ class StudentModel:
         elif self.in_review:
             self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in [q['question_id'] for q in self.student_history]]
             next_question_id = sample(self.remaining_question_ids, 1)[0]
-            self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+            if next_question_id in self.remaining_question_ids:
+                self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
         else:
             if self.model == '1':
                 prediction = self.pfa_model()
@@ -193,7 +196,8 @@ class StudentModel:
 
             # get a random question id from the remaining questions ids
             next_question_id = sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == next_question_kc and i['id'] not in [q['question_id'] for q in self.student_history]], 1)[0]
-            self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+            if next_question_id in self.remaining_question_ids:
+                self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
 
         print(next_question_id)
         print(self.student_history)
