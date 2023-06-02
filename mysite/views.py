@@ -14,95 +14,195 @@ from django.http import JsonResponse
 from django.core import serializers
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
+from django.utils import timezone
+
 
 import json
 from random import choice
 from scipy.special import expit
+from random import sample, shuffle
+from statistics import mean
+import numpy as np
+import pandas as pd
+import pickle
 
-# Load the necessary data and define the StudentModel class
-with open('mysite/train/parameters.txt') as file:
-    DEFAULT_PARAMETERS = file.read().replace('[', '').replace(']', '').replace('\n', ', ').replace(' ', '').split(',')
-    DEFAULT_PARAMETERS = [float(i) for i in DEFAULT_PARAMETERS]
+DEFAULT_PARAMETERS = (-0.06760512, 0.1, -0.01688316, -0.21032119, 0.00128378, -0.02590103, -0.30148615, 0.03580852, -0.0356914)
 
 with open('mysite/Compiler/aicomprehend_annotated_dataset_v7.json') as file:
     MASTER_DATA = json.load(file)
 
 class StudentModel:
+    def __init__(self, student_id, student_history, student_parameters=DEFAULT_PARAMETERS, remaining_question_ids=None, diagnostic_test_ids=None,
+                mastered_components=None, inappropriate_components=None, model=None, in_diagnostic=False, in_review=False):
 
-    def __init__(self, student_id, student_history, student_parameters=DEFAULT_PARAMETERS):
         self.student_id = student_id
         self.student_history = student_history
-        self.student_parameters = student_parameters
-        self.correct_responses = {'literal': 0, 'inferential': 0, 'critical': 0}
-        self.incorrect_responses = {'literal': 0, 'inferential': 0, 'critical': 0}
-        self.pred_literal = 0
-        self.pred_inferential = 0
-        self.pred_critical = 0
+        self.recent_history = student_history[-30:]
+        # # get knowledge component of last 30 questions using student_history and MASTER_DATA
+        # self.recent_history = [MASTER_DATA[i['question_id']]['knowledge_component'] for i in self.recent_history]
 
-        # Initialize the student's number of correct and incorrect responses for each knowledge component
-        for response in self.student_history:
-            question_id = response['question_id']
-            knowledge_component = MASTER_DATA[question_id]['knowledge_component']
-            if response['correct']:
-                self.correct_responses[knowledge_component] += 1
-            else:
-                self.incorrect_responses[knowledge_component] += 1
+        # get correct/incorrect of last 30 questions using student_history
+        self.correct_responses = {
+            'literal': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'literal'].count(True),
+            'inferential': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'inferential'].count(True),
+            'critical': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'critical'].count(True)}
+
+        self.incorrect_responses = {
+            'literal': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'literal'].count(False),
+            'inferential': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'inferential'].count(False),
+            'critical': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'critical'].count(False)}
+        self.correct_responses['literal'] += self.correct_responses['inferential'] + self.correct_responses['critical']
+        self.correct_responses['inferential'] += self.correct_responses['critical']
+        self.incorrect_responses['literal'] += self.incorrect_responses['inferential'] + self.incorrect_responses['critical']
+        self.incorrect_responses['inferential'] += self.incorrect_responses['critical']
+        self.student_parameters = student_parameters
+
+        if diagnostic_test_ids is None:
+            # add 3 unique questions from each knowledge component
+            self.diagnostic_ids = []
+            self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'literal'], 3))
+            self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'inferential'], 3))
+            self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'critical'], 3))
+            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids + [q['question_id'] for q in self.student_history]]
+        else:
+            self.diagnostic_ids = diagnostic_test_ids
+            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids + [q['question_id'] for q in self.student_history]]
+
+        if mastered_components is None:
+            self.mastered_components = []
+        else:
+            self.mastered_components = mastered_components
+        if inappropriate_components is None:
+            self.inappropriate_components = []
+        else:
+            self.inappropriate_components = inappropriate_components
+
+        if model is None:
+            self.model = self.model_chooser()
+        else:
+            self.model = model
+
+        self.in_review = in_review
+        self.in_diagnostic = in_diagnostic
+
+    def model_chooser(self):
+        # if student_id is odd, use model 1, if even, use model 2
+        if self.student_id % 2 == 0:
+            print("model 1")
+            return '1'
+            
+        else:
+            print("model 2")
+            return '2'
+            
+        
 
     def pfa_model(self):
-        beta_literal, gamma_literal, rho_literal, beta_inferential, gamma_inferential, rho_inferential, beta_critical, gamma_critical, rho_critical = self.student_parameters
 
-        # Calculate the student's probability of answering each knowledge component correctly
-        m_literal = beta_literal + gamma_literal * self.correct_responses['literal'] + rho_literal * self.incorrect_responses['literal']
-        m_inferential = beta_inferential + gamma_inferential * self.correct_responses['inferential'] + rho_inferential * self.incorrect_responses['inferential']
-        m_critical = beta_critical + gamma_critical * self.correct_responses['critical'] + rho_critical * self.incorrect_responses['critical']
+        beta_literal, gamma_literal, rho_literal, beta_inferential, gamma_inferential, rho_inferential, beta_critical, \
+            gamma_critical, rho_critical = self.student_parameters
 
-        # Return the student's probability of answering each knowledge component correctly
-        self.pred_literal = expit(m_literal)
-        self.pred_inferential = expit(m_inferential)
-        self.pred_critical = expit(m_critical)
+        m_literal = beta_literal + gamma_literal * self.correct_responses['literal'] + rho_literal * \
+                    self.incorrect_responses['literal']
+        m_inferential = beta_inferential + gamma_inferential * self.correct_responses['inferential'] + rho_inferential * \
+                        self.incorrect_responses['inferential']
+        m_critical = beta_critical + gamma_critical * self.correct_responses['critical'] + rho_critical * \
+                     self.incorrect_responses['critical']
 
-        return {'literal': self.pred_literal, 'inferential': self.pred_inferential, 'critical': self.pred_critical}
+        p_literal = expit(m_literal)
+        p_inferential = expit(m_inferential + m_literal)
+        p_critical = expit(m_critical + m_inferential + m_literal)
 
-    def question_choice(self):
-        # Get the student's probability of answering each knowledge component correctly
-        predictions = self.pfa_model()
+        prediction = {'literal': np.clip(p_literal, 0.01, 0.99), 'inferential': np.clip(p_inferential, 0.01, 0.99),
+                      'critical': np.clip(p_critical, 0.01, 0.99)}
 
-        # Load all probabilities of correctness
-        correct_pred_literal = predictions['literal']
-        correct_pred_inferential = predictions['inferential']
-        correct_pred_critical = predictions['critical']
+        self.mastered_components = [i for i in prediction if prediction[i] > 0.8 and i not in self.mastered_components]
+        self.inappropriate_components = [i for i in prediction if prediction[
+            i] < 0.2 and i != 'literal' and i not in self.inappropriate_components and i not in self.mastered_components]
 
-        incorrect_pred_literal = 1 - correct_pred_literal
-        incorrect_pred_inferential = 1 - correct_pred_inferential
-        incorrect_pred_critical = 1 - correct_pred_critical
+        return prediction
 
-        correct_pred_average = (correct_pred_literal + correct_pred_inferential + correct_pred_critical) / 3
-        incorrect_pred_average = (incorrect_pred_literal + incorrect_pred_inferential + incorrect_pred_critical) / 3
+    def log_res_vanilla(self):
+        with open('log_res.pkl', 'rb') as model_file:
+            log_res = pickle.load(model_file)
 
-        # print(correct_pred_literal, correct_pred_inferential, correct_pred_critical)
-        # print(incorrect_pred_literal, incorrect_pred_inferential, incorrect_pred_critical)
-        # print(correct_pred_average, incorrect_pred_average)
+        data = pd.DataFrame({'kc_literal', 'kc_inferential', 'kc_critical',
+                             'kc_literal_success', 'kc_inferential_success', 'kc_critical_success',
+                             'kc_literal_failure', 'kc_inferential_failure', 'kc_critical_failure'})
 
-        # calculate the expected value of each knowledge component
-        expected_value_literal = correct_pred_literal * correct_pred_average + incorrect_pred_literal * incorrect_pred_average
-        expected_value_inferential = correct_pred_inferential * correct_pred_average + incorrect_pred_inferential * incorrect_pred_average
-        expected_value_critical = correct_pred_critical * correct_pred_average + incorrect_pred_critical * incorrect_pred_average
+        data.loc[0] = [0, 0, 0, self.correct_responses['literal'], self.correct_responses['inferential'],
+                        self.correct_responses['critical'], self.incorrect_responses['literal'],
+                        self.incorrect_responses['inferential'], self.incorrect_responses['critical']]
 
-        # print(expected_value_literal, expected_value_inferential, expected_value_critical)
+        literal_data = inferential_data = critical_data = data.copy()
+        literal_data['kc_literal'] = 1
+        literal_data['kc_inferential'] = literal_data['kc_critical'] = 0
 
-        if max(expected_value_literal, expected_value_inferential, expected_value_critical) == expected_value_literal:
-            next_knowledge_component = 'literal'
-        elif max(expected_value_literal, expected_value_inferential,
-                 expected_value_critical) == expected_value_inferential:
-            next_knowledge_component = 'inferential'
+        inferential_data['kc_literal'] = inferential_data['kc_inferential'] = 1
+        inferential_data['kc_critical'] = 0
+
+        critical_data['kc_literal'] = critical_data['kc_inferential'] = critical_data['kc_critical'] = 1
+
+        prediction = {'literal': np.clip(log_res.predict_proba(literal_data)[0][1], 0.01, 0.99),
+                      'inferential': np.clip(log_res.predict_proba(inferential_data)[0][1], 0.01, 0.99),
+                      'critical': np.clip(log_res.predict_proba(critical_data)[0][1], 0.01, 0.99)}
+
+        self.mastered_components = [i for i in prediction if prediction[i] > 0.8 and i not in self.mastered_components]
+        self.inappropriate_components = [i for i in prediction if prediction[
+            i] < 0.2 and i != 'literal' and i not in self.inappropriate_components and i not in self.mastered_components]
+
+        return prediction
+
+    def model_response(self):
+        if len(self.recent_history) == 0:
+            self.in_diagnostic = True
+
+        if self.in_diagnostic:
+            if len(self.recent_history) == 9:
+                self.in_diagnostic = False
+                shuffle(self.diagnostic_ids)
+                next_question_id = self.diagnostic_ids[0]
+            elif len([i for i in self.student_history if i['question_id'] in self.diagnostic_ids]) == 18:
+                self.in_diagnostic = False
+                self.in_review = True
+                self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in [q['question_id'] for q in self.student_history]]
+                next_question_id = sample(self.remaining_question_ids, 1)[0]
+                self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+            elif len(self.mastered_components) == 3:
+                next_question_id = self.diagnostic_ids[len(self.recent_history)]
+            else:
+                next_question_id = self.diagnostic_ids[len(self.recent_history)]
+        elif self.in_review:
+            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in [q['question_id'] for q in self.student_history]]
+            next_question_id = sample(self.remaining_question_ids, 1)[0]
+            self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
         else:
-            next_knowledge_component = 'critical'
+            if self.model == '1':
+                prediction = self.pfa_model()
+            else:
+                prediction = self.log_res_vanilla()
 
-        # Return a question from the knowledge component with the highest expected value
-        next_question_id = choice([MASTER_DATA[i] for i in range(1, len(MASTER_DATA)) if
-                                   MASTER_DATA[i]["knowledge_component"] == next_knowledge_component])
+            expectation = {}
+            for i in prediction:
+                expectation[i] = prediction[i] * mean(prediction.values()) + (1 - prediction[i]) * (1 - mean(prediction.values()))
 
-        return next_question_id['id']
+            # remove mastered components and inappropriate components from expectation
+            expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
+
+            next_question_kc = max(expectation, key=expectation.get)
+
+            # get a random question id from the remaining questions ids
+            next_question_id = sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == next_question_kc and i['id'] not in [q['question_id'] for q in self.student_history]], 1)[0]
+            self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+
+        print(next_question_id)
+        print(self.student_history)
+        print(self.remaining_question_ids)
+
+        return next_question_id, self.mastered_components, self.remaining_question_ids, self.diagnostic_ids, \
+            self.inappropriate_components, self.model, self.in_review, self.in_diagnostic
+
+
 
     
 @login_required
@@ -118,7 +218,9 @@ def next_question(request):
         })
 
     student_model = StudentModel(student_id=user.id, student_history=user_history)
-    next_question_id = student_model.question_choice()
+    next_question_id = student_model.model_response()[0]
+    print("next question id")
+    print(next_question_id)
 
     return JsonResponse({'next_question_id': next_question_id})
 
@@ -172,7 +274,10 @@ def test(request):
 
     # Get the next question based on the student model
     next_question_id = json.loads(next_question(request).content)['next_question_id']
+    if isinstance(next_question_id, list):
+        next_question_id = next_question_id[0]
     question = Question.objects.get(id=next_question_id)
+
     choices = json.dumps(question.choices)
     relevant_sentences = json.dumps(question.relevant_sentences)
 
@@ -202,6 +307,11 @@ def update_user_answer(request):
         question_id = request.POST.get('question_id')
         selected_answer = request.POST.get('selected_answer')
 
+        # Validate POST data
+        if not question_id or not selected_answer:
+            print("Missing required data")
+            return JsonResponse({'error': 'Missing required data'}, status=400)
+
         print("User ID: ", user_id)
         print("Question ID: ", question_id)
         print("Selected Answer: ", selected_answer)
@@ -222,11 +332,21 @@ def update_user_answer(request):
         is_correct = selected_answer_letter == correct_answer
 
         # Update or create the UserAnswer
+        print(user_id, question_id, selected_answer_letter, is_correct, timezone.now())
         user_answer, created = UserAnswer.objects.update_or_create(
             user_id=user_id, question_id=question_id,
             defaults={'answer': selected_answer_letter, 'correct': is_correct, 'submission_time': timezone.now()} # Add 'submission_time' field here
         )
+        #print number of questions the user has answered
+        print(UserAnswer.objects.filter(user=request.user).count())
         user_answer.save()
+        
+        # Check if created or updated
+        if created:
+            print("UserAnswer created")
+        else:
+            print("UserAnswer updated")
+        
 
         return JsonResponse({'message': 'UserAnswer updated'}, status=200)
     else:

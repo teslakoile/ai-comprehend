@@ -52,7 +52,6 @@
 </script>
 <div class="test-content">
     <button id="exit-btn" onclick="handleExitClick()" class="exit-btn">X</button>
-
     <h3>Question {{ user.useranswer_set.count|add:"1" }}/{{ questions_count }}</h3>
     <p id="passage">{{ question.passage }}</p>
 
@@ -179,7 +178,17 @@
         let alertDiv = document.createElement('div');
         alertDiv.classList.add('alert-message');
 
-        if (answer === correctAnswer) {
+        console.log(`Answer: ${answer}, Correct Answer: ${correctAnswer}`);
+        correctAnswer = correctAnswer
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#x27;/g, "'")
+            .replace(/&#x2F;/g, "/")
+            .replace(/&#x60;/g, "`");
+        console.log(`Answer: ${answer}, Correct Answer unescaped: ${correctAnswer}`);
+        if (answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
             selectedButton.classList.remove('selected');
             selectedButton.classList.add('correct');
             alertDiv.innerHTML = '<strong>Correct!</strong><br>';
@@ -190,7 +199,15 @@
 
             // To color the correct choice green
             for (let i = 0; i < choiceButtons.length; i++) {
-                if (choiceButtons[i].innerText === correctChoice) {
+                correctChoice = correctChoice
+                    .replace(/&amp;/g, "&")
+                    .replace(/&lt;/g, "<")
+                    .replace(/&gt;/g, ">")
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#x27;/g, "'")
+                    .replace(/&#x2F;/g, "/")
+                    .replace(/&#x60;/g, "`");
+                if (choiceButtons[i].innerText.trim().toLowerCase() === correctChoice.trim().toLowerCase()) {
                     choiceButtons[i].classList.add('correct');
                     break;
                 }
@@ -261,7 +278,6 @@ function updateUserAnswer(questionId, selectedAnswer) {
     xhttp.setRequestHeader("X-CSRFToken", csrftoken);
     xhttp.send(`question_id=${questionId}&selected_answer=${selectedAnswer}`);
 }
-
 
     document.getElementById('answer-form').addEventListener('submit', handleSubmit);
 
