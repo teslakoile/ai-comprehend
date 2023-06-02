@@ -24,19 +24,19 @@
         {% csrf_token %}
         <label for="email">Email:</label><br>
         <div class="input-field">
-          <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+          <input type="email" id="email" name="email" placeholder="firstname.lastname@schoolinitials.com" required>
           <img src="{% static 'mysite/email-icon.png' %}">
         </div>      
   
         <label for="password">Password:</label><br>
         <div class="input-field">
-          <input type="password" id="password" name="password" placeholder="••••••••" required>
+          <input type="password" id="password" name="password" placeholder="yourpassword" required>
           <img src="{% static 'mysite/password-icon.png' %}">
         </div>
         
         <label for="confirm_password">Confirm Password:</label><br>
         <div class="input-field">
-          <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
+          <input type="password" id="confirm_password" name="confirm_password" placeholder="yourpassword" required>
           <img src="{% static 'mysite/password-icon.png' %}">
         </div>
   

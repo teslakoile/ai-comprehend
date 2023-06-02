@@ -155,6 +155,19 @@ input{
     border-radius: 10px;
     border-color: transparent;
 }
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active  {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 27px;
+    
+    color: #C8C8C8;
+    
+}
 button{
     margin-left: 130px;
     margin-top: 15px;
@@ -202,6 +215,7 @@ button{
     line-height: 33px;
     text-align: left;
     padding-left: 30px;
+    padding-right: 30px;
     /* identical to box height */
 
 
