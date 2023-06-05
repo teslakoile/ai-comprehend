@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.contrib.postgres.fields import ArrayField
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class Question(models.Model):
@@ -18,9 +21,17 @@ class Question(models.Model):
 
     def __str__(self):
         return self.question_text
+    
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    history = models.TextField(blank=True, default='')
+    history = ArrayField(models.IntegerField(), default=list)
+    remaining_question_ids = ArrayField(models.IntegerField(), default=list)
+    diagnostic_test_ids = ArrayField(models.IntegerField(), default=list)
+    mastered_components = ArrayField(models.CharField(max_length=255), default=list)
+    inappropriate_components = ArrayField(models.CharField(max_length=255), default=list)
+    model = models.CharField(max_length=50, default='')
+    in_diagnostic = models.BooleanField(default=False)
+    in_review = models.BooleanField(default=False)
 
 class UserAnswer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -31,3 +42,12 @@ class UserAnswer(models.Model):
 
     class Meta:
         unique_together = ('user', 'question')
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.userprofile.save()

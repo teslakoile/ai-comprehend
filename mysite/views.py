@@ -20,11 +20,13 @@ from django.utils import timezone
 import json
 from random import choice
 from scipy.special import expit
+from sklearn.utils import shuffle
 from random import sample, shuffle
 from statistics import mean
 import numpy as np
 import pandas as pd
 import pickle
+from .models import UserProfile
 
 DEFAULT_PARAMETERS = (-0.06760512, 0.1, -0.01688316, -0.21032119, 0.00128378, -0.02590103, -0.30148615, 0.03580852, -0.0356914)
 
@@ -38,6 +40,14 @@ class StudentModel:
         self.student_id = student_id
         self.student_history = student_history
         self.recent_history = student_history[-30:]
+        self.remaining_question_ids = remaining_question_ids
+        self.diagnostic_test_ids = diagnostic_test_ids
+        self.mastered_components = mastered_components
+        self.inappropriate_components = inappropriate_components
+        self.model = model
+        self.in_diagnostic = in_diagnostic
+        self.in_review = in_review
+
         # # get knowledge component of last 30 questions using student_history and MASTER_DATA
         # self.recent_history = [MASTER_DATA[i['question_id']]['knowledge_component'] for i in self.recent_history]
 
@@ -63,10 +73,9 @@ class StudentModel:
             self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'literal'], 3))
             self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'inferential'], 3))
             self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'critical'], 3))
-            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids + [q['question_id'] for q in self.student_history]]
+            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids]
         else:
             self.diagnostic_ids = diagnostic_test_ids
-            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids + [q['question_id'] for q in self.student_history]]
 
         if mastered_components is None:
             self.mastered_components = []
@@ -88,14 +97,9 @@ class StudentModel:
     def model_chooser(self):
         # if student_id is odd, use model 1, if even, use model 2
         if self.student_id % 2 == 0:
-            print("model 1")
             return '1'
-            
         else:
-            print("model 2")
             return '2'
-            
-        
 
     def pfa_model(self):
 
@@ -116,14 +120,15 @@ class StudentModel:
         prediction = {'literal': np.clip(p_literal, 0.01, 0.99), 'inferential': np.clip(p_inferential, 0.01, 0.99),
                       'critical': np.clip(p_critical, 0.01, 0.99)}
 
-        self.mastered_components = [i for i in prediction if prediction[i] > 0.8 and i not in self.mastered_components]
-        self.inappropriate_components = [i for i in prediction if prediction[
-            i] < 0.2 and i != 'literal' and i not in self.inappropriate_components and i not in self.mastered_components]
+        self.mastered_components = [i for i in prediction if
+                                    (prediction[i] > 0.8 and i not in self.mastered_components) or i in self.mastered_components]
+        self.inappropriate_components = [i for i in prediction if
+                                         (prediction[i] < 0.2 and i != 'literal' or i in self.inappropriate_components) and i not in self.mastered_components]
 
         return prediction
 
     def log_res_vanilla(self):
-        with open('log_res.pkl', 'rb') as model_file:
+        with open('mysite/log_res.pkl', 'rb') as model_file:
             log_res = pickle.load(model_file)
 
         data = pd.DataFrame({'kc_literal', 'kc_inferential', 'kc_critical',
@@ -147,67 +152,62 @@ class StudentModel:
                       'inferential': np.clip(log_res.predict_proba(inferential_data)[0][1], 0.01, 0.99),
                       'critical': np.clip(log_res.predict_proba(critical_data)[0][1], 0.01, 0.99)}
 
-        self.mastered_components = [i for i in prediction if prediction[i] > 0.8 and i not in self.mastered_components]
-        self.inappropriate_components = [i for i in prediction if prediction[
-            i] < 0.2 and i != 'literal' and i not in self.inappropriate_components and i not in self.mastered_components]
+        self.mastered_components = [i for i in prediction if
+                                    (prediction[i] > 0.8 and i not in self.mastered_components) or i in self.mastered_components]
+        self.inappropriate_components = [i for i in prediction if
+                                         (prediction[i] < 0.2 and i != 'literal' or i in self.inappropriate_components) and i not in self.mastered_components]
 
         return prediction
 
     def model_response(self):
+
         if len(self.recent_history) == 0:
             self.in_diagnostic = True
 
-        if self.in_diagnostic:
-            if len(self.recent_history) == 9:
-                self.in_diagnostic = False
-                shuffle(self.diagnostic_ids)
-                next_question_id = self.diagnostic_ids[0]
-            elif len([i for i in self.student_history if i['question_id'] in self.diagnostic_ids]) == 18:
-                self.in_diagnostic = False
-                self.in_review = True
-                self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in [q['question_id'] for q in self.student_history]]
-                next_question_id = sample(self.remaining_question_ids, 1)[0]
-                if next_question_id in self.remaining_question_ids:
-                    self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+        if self.model == '1':
+            prediction = self.pfa_model()
+        elif self.model == '2':
+            prediction = self.log_res_vanilla()
 
-            elif len(self.mastered_components) == 3:
-                next_question_id = self.diagnostic_ids[len(self.recent_history)]
-            else:
-                next_question_id = self.diagnostic_ids[len(self.recent_history)]
+        if len(self.mastered_components) == 3:
+            self.in_diagnostic = True
+
+        if self.in_diagnostic and len(self.recent_history) == 9:
+            self.in_diagnostic = False
+            next_question_id = self.diagnostic_ids[len(self.recent_history - 1)]
+            shuffle(self.diagnostic_ids)
+        elif self.in_diagnostic and len([i for i in self.student_history if i['question_id'] in self.diagnostic_ids]) == 18:
+            self.in_diagnostic = False
+            self.in_review = True
+            self.remaining_question_ids = [i['id'] for i in MASTER_DATA]
+            next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
+        elif self.in_diagnostic and len(self.mastered_components) == 3:
+            next_question_id = self.diagnostic_ids[[i for i in self.student_history[9:] if i['question_id'] in self.diagnostic_ids]]
+        elif self.in_diagnostic:
+            next_question_id = self.diagnostic_ids[len(self.recent_history)]
         elif self.in_review:
-            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in [q['question_id'] for q in self.student_history]]
-            next_question_id = sample(self.remaining_question_ids, 1)[0]
-            if next_question_id in self.remaining_question_ids:
-                self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+            next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
         else:
-            if self.model == '1':
-                prediction = self.pfa_model()
-            else:
-                prediction = self.log_res_vanilla()
-
             expectation = {}
             for i in prediction:
-                expectation[i] = prediction[i] * mean(prediction.values()) + (1 - prediction[i]) * (1 - mean(prediction.values()))
+                expectation[i] = prediction[i] * mean(prediction.values()) + (1 - prediction[i]) * (
+                        1 - mean(prediction.values()))
 
             # remove mastered components and inappropriate components from expectation
-            expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
+            if len(np.setdiff1d(self.inappropriate_components - self.mastered_components)):
+                expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
+            else:
+                expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components}
 
             next_question_kc = max(expectation, key=expectation.get)
 
             # get a random question id from the remaining questions ids
-            next_question_id = sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == next_question_kc and i['id'] not in [q['question_id'] for q in self.student_history]], 1)[0]
-            if next_question_id in self.remaining_question_ids:
-                self.remaining_question_ids.remove(next_question_id)  # remove the selected question id
+            next_question_id = choice(
+                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
+            self.remaining_question_ids.remove(next_question_id)
 
-        print(next_question_id)
-        print(self.student_history)
-        print(self.remaining_question_ids)
-
-        return next_question_id, self.mastered_components, self.remaining_question_ids, self.diagnostic_ids, \
-            self.inappropriate_components, self.model, self.in_review, self.in_diagnostic
-
-
-
+        return next_question_id, self.student_parameters, self.remaining_question_ids, self.diagnostic_ids, self.mastered_components,\
+               self.inappropriate_components, self.model, self.in_diagnostic, self.in_review
     
 @login_required
 def next_question(request):
@@ -222,7 +222,7 @@ def next_question(request):
         })
 
     student_model = StudentModel(student_id=user.id, student_history=user_history)
-    next_question_id = student_model.model_response()[0]
+    next_question_id = student_model.model_response()
     print("next question id")
     print(next_question_id)
 
@@ -249,6 +249,8 @@ def register(request):
         else:
             user = User.objects.create_user(username=email, email=email, password=password)
             user.save()
+            user_profile = UserProfile(user=user)
+            user_profile.save()
             messages.success(request, 'Account created successfully!')
             return redirect('home')
 
@@ -276,10 +278,25 @@ def test(request):
     questions_count = Question.objects.count()
     answered_questions_count = answered_questions.count()
 
+    # Get user profile
+    user_profile = UserProfile.objects.get(user=request.user)
+
+    # Instantiate StudentModel with data from user_profile and answered_questions
+    student_model = StudentModel(
+        user.id, 
+        list(answered_questions), 
+        user_profile.remaining_question_ids,
+        user_profile.diagnostic_test_ids,
+        user_profile.mastered_components,
+        user_profile.inappropriate_components,
+        user_profile.model,
+        user_profile.in_diagnostic,
+        user_profile.in_review
+    )
+
     # Get the next question based on the student model
-    next_question_id = json.loads(next_question(request).content)['next_question_id']
-    if isinstance(next_question_id, list):
-        next_question_id = next_question_id[0]
+    next_question_id, mastered_components, remaining_question_ids, diagnostic_ids, inappropriate_components, model, in_review, in_diagnostic = student_model.model_response()
+
     question = Question.objects.get(id=next_question_id)
 
     choices = json.dumps(question.choices)
@@ -289,6 +306,17 @@ def test(request):
         selected_choice = request.POST['selected_choice']
         user_answer = UserAnswer(user=request.user, question=question, answer=selected_choice)
         user_answer.save()
+
+    # Update fields
+    user_profile.in_diagnostic = in_diagnostic
+    user_profile.in_review = in_review
+    user_profile.model = model
+    user_profile.mastered_components = mastered_components
+    user_profile.inappropriate_components = inappropriate_components
+    user_profile.diagnostic_test_ids = diagnostic_ids
+    user_profile.remaining_question_ids = remaining_question_ids
+
+    user_profile.save()
 
     return render(request, 'test.html', {
         'question': question, 
@@ -350,6 +378,16 @@ def update_user_answer(request):
             print("UserAnswer created")
         else:
             print("UserAnswer updated")
+
+        user_profile = UserProfile.objects.get(user=request.user)
+
+        # Update fields
+        user_profile.history.append({
+            'question_id': int(question_id),
+            'correct': int(is_correct)
+        })
+
+        user_profile.save()
         
 
         return JsonResponse({'message': 'UserAnswer updated'}, status=200)
