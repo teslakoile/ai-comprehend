@@ -7,6 +7,13 @@ from .models import UserProfile
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'model', 'mastered_components', 'inappropriate_components', 
                     'diagnostic_test_ids', 'remaining_question_ids')
+    
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['mastered_components'].required = False
+        form.base_fields['inappropriate_components'].required = False
+        form.base_fields['diagnostic_test_ids'].required = False
+        return form
 
 class UserAnswerAdmin(admin.ModelAdmin):
     list_display = ('user', 'question', 'correct')
@@ -18,7 +25,7 @@ def delete_user_history(modeladmin, request, queryset):
     delete_user_history.short_description = "Delete selected users' history"
 
 
-class UserAnswerInline(admin.TabularInline):
+class UserAnswerInline(admin.TabularInline):    
     model = UserAnswer
     extra = 0
 

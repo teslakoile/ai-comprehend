@@ -38,7 +38,7 @@
     <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
   </div>
   <script>
-    const answeredQuestionsCount = parseInt("{{ answered_questions_count }}");
+    const answeredQuestionsCount = parseInt("{{ history|length }}");
     const totalQuestionsCount = parseInt("{{ questions_count }}");
   
     function updateProgressBar() {
@@ -52,7 +52,7 @@
 </script>
 <div class="test-content">
     <button id="exit-btn" onclick="handleExitClick()" class="exit-btn">X</button>
-    <h3>Question {{ user.useranswer_set.count|add:"1" }}/{{ questions_count }}</h3>
+    <h3>Question {{ history|length|add:"1" }}/{{ questions_count }}</h3>
     <p id="passage">{{ question.passage }}</p>
 
   <!-- <h3>Question:</h3> -->

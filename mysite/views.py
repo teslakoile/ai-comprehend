@@ -15,7 +15,7 @@ from django.core import serializers
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
-
+from django.core.exceptions import ValidationError
 
 import json
 from random import choice
@@ -57,6 +57,8 @@ class StudentModel:
         # self.recent_history = [MASTER_DATA[i['question_id']]['knowledge_component'] for i in self.recent_history]
 
         # get correct/incorrect of last 30 questions using student_history
+        print("self.student_history: ", self.student_history)
+        print("self.recent_history: ", self.recent_history)
         self.correct_responses = {
             'literal': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'literal'].count(True),
             'inferential': [i['correct'] for i in self.recent_history if MASTER_DATA[i['question_id']]['knowledge_component'] == 'inferential'].count(True),
@@ -72,12 +74,24 @@ class StudentModel:
         self.incorrect_responses['inferential'] += self.incorrect_responses['critical']
         self.student_parameters = student_parameters
 
-        if diagnostic_test_ids is None:
+        print("diag test ids: ", diagnostic_test_ids)
+
+        if len(diagnostic_test_ids) == 0:
             # add 3 unique questions from each knowledge component
             self.diagnostic_ids = []
-            self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'literal'], 3))
-            self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'inferential'], 3))
-            self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'critical'], 3))
+            try:
+                self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'literal'], 3))
+            except ValueError:
+                print("Not enough 'literal' items in MASTER_DATA")
+            try:
+                self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'inferential'], 3))
+            except ValueError:
+                print("Not enough 'inferential' items in MASTER_DATA")
+            try:
+                self.diagnostic_ids.extend(sample([i['id'] for i in MASTER_DATA if i['knowledge_component'] == 'critical'], 3))
+            except ValueError:
+                print("Not enough 'critical' items in MASTER_DATA")
+
             self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids]
         else:
             self.diagnostic_ids = diagnostic_test_ids
@@ -107,6 +121,8 @@ class StudentModel:
             return '2'
 
     def pfa_model(self):
+
+        self.student_parameters = DEFAULT_PARAMETERS
 
         beta_literal, gamma_literal, rho_literal, beta_inferential, gamma_inferential, rho_inferential, beta_critical, \
             gamma_critical, rho_critical = self.student_parameters
@@ -167,17 +183,6 @@ class StudentModel:
 
     def model_response(self):
 
-        print("Student ID: {}".format(self.student_id))
-        print("Student History: {}".format(self.student_history))
-        print("Recent History: {}".format(self.recent_history))
-        print("Correct Responses: {}".format(self.correct_responses))
-        print("Incorrect Responses: {}".format(self.incorrect_responses))
-        print("Mastered Components: {}".format(self.mastered_components))
-        print("Inappropriate Components: {}".format(self.inappropriate_components))
-        print("In Review: {}".format(self.in_review))
-        print("In Diagnostic: {}".format(self.in_diagnostic))
-        print("Model: {}".format(self.model))
-
         if len(self.recent_history) == 0:
             self.in_diagnostic = True
 
@@ -201,6 +206,8 @@ class StudentModel:
         elif self.in_diagnostic and len(self.mastered_components) == 3:
             next_question_id = self.diagnostic_ids[[i for i in self.student_history[9:] if i['question_id'] in self.diagnostic_ids]]
         elif self.in_diagnostic:
+            print("self.diagnostic_ids: ", self.diagnostic_ids)
+            print("self.recent_history: ", self.recent_history)
             next_question_id = self.diagnostic_ids[len(self.recent_history)]
         elif self.in_review:
             next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
@@ -211,7 +218,7 @@ class StudentModel:
                         1 - mean(prediction.values()))
 
             # remove mastered components and inappropriate components from expectation
-            if len(np.setdiff1d(self.inappropriate_components - self.mastered_components)):
+            if len(set(self.inappropriate_components) - set(self.mastered_components)):
                 expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
             else:
                 expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components}
@@ -223,6 +230,17 @@ class StudentModel:
                 [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
             self.remaining_question_ids.remove(next_question_id)
 
+        print("Student ID: {}".format(self.student_id))
+        print("Student History: {}".format(self.student_history))
+        print("Recent History: {}".format(self.recent_history))
+        print("Correct Responses: {}".format(self.correct_responses))
+        print("Incorrect Responses: {}".format(self.incorrect_responses))
+        print("Mastered Components: {}".format(self.mastered_components))
+        print("Inappropriate Components: {}".format(self.inappropriate_components))
+        print("In Review: {}".format(self.in_review))
+        print("In Diagnostic: {}".format(self.in_diagnostic))
+        print("Model: {}".format(self.model))
+
         return next_question_id, self.student_parameters, self.remaining_question_ids, self.diagnostic_ids, self.mastered_components,\
                self.inappropriate_components, self.model, self.in_diagnostic, self.in_review
     
@@ -232,18 +250,35 @@ def next_question(request):
     user_profile = UserProfile.objects.get(user=user)
     if not user_profile.history:  # if history is empty, generate it from UserAnswer
         user_answers = UserAnswer.objects.filter(user=user)
-        user_history = []
-        for answer in user_answers:
-            user_history.append({
-                'question_id': answer.question.id,
-                'correct': int(answer.correct)
-            })
+        # user_history = []
+        # for answer in user_answers:
+        #     user_history.append({
+        #         'correct': int(answer.correct),
+        #         'question_id': answer.question.id
+        #     })
         user_profile.history = user_history
-        user_profile.save()
+        print("user_profile.history: ", user_profile.history)
+        print("saving history")
+        try:
+            user_profile.save()
+            print("user_profile saved in next question")
+        except ValidationError as e:
+            print("user_profile not saved in next question")
+            
     else:  # if history exists, load it from UserProfile
         user_history = user_profile.history
 
-    student_model = StudentModel(student_id=user.id, student_history=user_history)
+    if len(user_history):
+        student_model = StudentModel(student_id=user.id, student_history=user_history)
+    else:
+        student_model = StudentModel(student_id=user.id, student_history=user_history,
+                                     remaining_question_ids=user_profile.remaining_questions_ids,
+                                     diagnostic_test_ids=user_profile.diagnostic_test_ids,
+                                     mastered_components=user_profile.mastered_components,
+                                     inappropriate_components=user_profile.inappropriate_components,
+                                     model=user_profile.model,
+                                     in_diagnostic=user_profile.in_diagnostic, in_review=user_profile.in_review)
+        
     next_question_id = student_model.model_response()[0]
     print("next question id")
     print(next_question_id)
@@ -306,7 +341,7 @@ def test(request):
     # Instantiate StudentModel with data from user_profile and answered_questions
     student_model = StudentModel(
         user.id, 
-        list(answered_questions), 
+        user_profile.history, 
         user_profile.remaining_question_ids,
         user_profile.diagnostic_test_ids,
         user_profile.mastered_components,
@@ -317,8 +352,16 @@ def test(request):
     )
 
     # Get the next question based on the student model
-    next_question_id, mastered_components, remaining_question_ids, diagnostic_ids, inappropriate_components, model, in_review, in_diagnostic = student_model.model_response()
-
+    model_response = student_model.model_response()
+    next_question_id = model_response[0]
+    remaining_question_ids = model_response[2]
+    diagnostic_ids = model_response[3]
+    mastered_components = model_response[4]
+    inappropriate_components = model_response[5]
+    model = model_response[6]
+    in_diagnostic = model_response[7]
+    in_review = model_response[8]
+    
     question = Question.objects.get(id=next_question_id)
 
     choices = json.dumps(question.choices)
@@ -338,14 +381,22 @@ def test(request):
     user_profile.diagnostic_test_ids = diagnostic_ids
     user_profile.remaining_question_ids = remaining_question_ids
 
-    user_profile.save()
+    history = user_profile.history
+
+    print("printing user_profile")
+    try:
+        user_profile.save()
+        print("user_profile saved")
+    except ValidationError as e:
+        print("user_profile not saved")
 
     return render(request, 'test.html', {
         'question': question, 
         'choices': choices,
         'relevant_sentences': relevant_sentences,
         'questions_count': questions_count, 
-        'answered_questions_count': answered_questions_count
+        'answered_questions_count': answered_questions_count,
+        'history': history
     })
     
 
@@ -404,12 +455,13 @@ def update_user_answer(request):
         user_profile = UserProfile.objects.get(user=request.user)
 
         # Update fields
-        user_profile.history.append({
-            'question_id': int(question_id),
-            'correct': int(is_correct)
-        })
-
-        user_profile.save()
+        if not any(item['question_id'] == int(question_id) for item in user_profile.history):
+            # Update fields
+            user_profile.history.append({
+                'question_id': int(question_id),
+                'correct': int(is_correct)
+            })
+            user_profile.save()
         
 
         return JsonResponse({'message': 'UserAnswer updated'}, status=200)
