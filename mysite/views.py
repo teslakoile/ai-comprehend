@@ -44,9 +44,14 @@ class StudentModel:
         self.diagnostic_test_ids = diagnostic_test_ids
         self.mastered_components = mastered_components
         self.inappropriate_components = inappropriate_components
-        self.model = model
         self.in_diagnostic = in_diagnostic
         self.in_review = in_review
+        self.student_parameters = DEFAULT_PARAMETERS
+
+        if self.student_id % 2 == 0:
+            self.model = '1'
+        else:
+            self.model = '2'
 
         # # get knowledge component of last 30 questions using student_history and MASTER_DATA
         # self.recent_history = [MASTER_DATA[i['question_id']]['knowledge_component'] for i in self.recent_history]
@@ -86,10 +91,10 @@ class StudentModel:
         else:
             self.inappropriate_components = inappropriate_components
 
-        if model is None:
-            self.model = self.model_chooser()
-        else:
-            self.model = model
+        # if model is None:
+        #     self.model = self.model_chooser()
+        # else:
+        #     self.model = model
 
         self.in_review = in_review
         self.in_diagnostic = in_diagnostic
@@ -131,9 +136,9 @@ class StudentModel:
         with open('mysite/log_res.pkl', 'rb') as model_file:
             log_res = pickle.load(model_file)
 
-        data = pd.DataFrame({'kc_literal', 'kc_inferential', 'kc_critical',
+        data = pd.DataFrame(columns=['kc_literal', 'kc_inferential', 'kc_critical',
                              'kc_literal_success', 'kc_inferential_success', 'kc_critical_success',
-                             'kc_literal_failure', 'kc_inferential_failure', 'kc_critical_failure'})
+                             'kc_literal_failure', 'kc_inferential_failure', 'kc_critical_failure'])
 
         data.loc[0] = [0, 0, 0, self.correct_responses['literal'], self.correct_responses['inferential'],
                         self.correct_responses['critical'], self.incorrect_responses['literal'],
@@ -158,8 +163,20 @@ class StudentModel:
                                          (prediction[i] < 0.2 and i != 'literal' or i in self.inappropriate_components) and i not in self.mastered_components]
 
         return prediction
+    
 
     def model_response(self):
+
+        print("Student ID: {}".format(self.student_id))
+        print("Student History: {}".format(self.student_history))
+        print("Recent History: {}".format(self.recent_history))
+        print("Correct Responses: {}".format(self.correct_responses))
+        print("Incorrect Responses: {}".format(self.incorrect_responses))
+        print("Mastered Components: {}".format(self.mastered_components))
+        print("Inappropriate Components: {}".format(self.inappropriate_components))
+        print("In Review: {}".format(self.in_review))
+        print("In Diagnostic: {}".format(self.in_diagnostic))
+        print("Model: {}".format(self.model))
 
         if len(self.recent_history) == 0:
             self.in_diagnostic = True
@@ -212,17 +229,22 @@ class StudentModel:
 @login_required
 def next_question(request):
     user = request.user
-    user_answers = UserAnswer.objects.filter(user=user)
-    user_history = []
-
-    for answer in user_answers:
-        user_history.append({
-            'question_id': answer.question.id,
-            'correct': int(answer.correct)
-        })
+    user_profile = UserProfile.objects.get(user=user)
+    if not user_profile.history:  # if history is empty, generate it from UserAnswer
+        user_answers = UserAnswer.objects.filter(user=user)
+        user_history = []
+        for answer in user_answers:
+            user_history.append({
+                'question_id': answer.question.id,
+                'correct': int(answer.correct)
+            })
+        user_profile.history = user_history
+        user_profile.save()
+    else:  # if history exists, load it from UserProfile
+        user_history = user_profile.history
 
     student_model = StudentModel(student_id=user.id, student_history=user_history)
-    next_question_id = student_model.model_response()
+    next_question_id = student_model.model_response()[0]
     print("next question id")
     print(next_question_id)
 
