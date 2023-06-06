@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.contrib.postgres.fields import ArrayField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db.models import JSONField
 
 
 class Question(models.Model):
@@ -24,7 +25,7 @@ class Question(models.Model):
     
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    history = ArrayField(models.IntegerField(), default=list)
+    history = JSONField(default=list, blank=True)
     remaining_question_ids = ArrayField(models.IntegerField(), default=list)
     diagnostic_test_ids = ArrayField(models.IntegerField(), default=list)
     mastered_components = ArrayField(models.CharField(max_length=255), default=list)
@@ -40,8 +41,16 @@ class UserAnswer(models.Model):
     correct = models.BooleanField(default=False)
     submission_time = models.DateTimeField(default=timezone.now)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+        user_profile = UserProfile.objects.get(user=self.user)
+        history_entry = {"question_id": self.question.id, "correct": int(self.correct)}
+        user_profile.history.append(history_entry)
+        user_profile.save()
+
     class Meta:
         unique_together = ('user', 'question')
+
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
