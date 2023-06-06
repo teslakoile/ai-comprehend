@@ -15,6 +15,8 @@ import os
 import dj_database_url
 import django_heroku
 from dotenv import load_dotenv
+import dj_database_url
+import heroku3
 
 load_dotenv()
 
@@ -103,20 +105,35 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # }
 
 # POSTGRESQL
-if os.environ.get('DATABASE_URL'):
+# if os.environ.get('DATABASE_URL'):
+#     DATABASES = {
+#         'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+#     }
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': os.getenv('DJANGO_DB_NAME'),
+#             'USER': os.getenv('DJANGO_DB_USER'),
+#             'PASSWORD': os.getenv('DJANGO_DB_PASSWORD'),
+#             'HOST': os.getenv('DJANGO_DB_HOST'),
+#             'PORT': os.getenv('DJANGO_DB_PORT'),
+#         }
+#     }
+
+HEROKU_API_KEY = os.getenv('HEROKU_API_KEY')  # You should set this in your env vars
+
+if os.environ.get('HEROKU_APP_NAME'):
+    heroku_conn = heroku3.from_key(HEROKU_API_KEY)
+    app = heroku_conn.apps()[os.environ['HEROKU_APP_NAME']]
     DATABASES = {
-        'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+        'default': dj_database_url.config(default=app.config()['DATABASE_URL']),
     }
 else:
+    heroku_conn = heroku3.from_key(HEROKU_API_KEY)
+    app = heroku_conn.apps()[os.environ['HEROKU_APP_NAME']]
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DJANGO_DB_NAME'),
-            'USER': os.getenv('DJANGO_DB_USER'),
-            'PASSWORD': os.getenv('DJANGO_DB_PASSWORD'),
-            'HOST': os.getenv('DJANGO_DB_HOST'),
-            'PORT': os.getenv('DJANGO_DB_PORT'),
-        }
+        'default': dj_database_url.config(default=app.config()['DATABASE_URL']),
     }
 
 
