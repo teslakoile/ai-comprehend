@@ -273,7 +273,7 @@ def next_question(request):
         student_model = StudentModel(student_id=user.id, student_history=user_history)
     else:
         student_model = StudentModel(student_id=user.id, student_history=user_history,
-                                     remaining_question_ids=user_profile.remaining_questions_ids,
+                                     remaining_question_ids=user_profile.remaining_question_ids,
                                      diagnostic_test_ids=user_profile.diagnostic_test_ids,
                                      mastered_components=user_profile.mastered_components,
                                      inappropriate_components=user_profile.inappropriate_components,
@@ -307,8 +307,11 @@ def register(request):
         else:
             user = User.objects.create_user(username=email, email=email, password=password)
             user.save()
-            user_profile = UserProfile(user=user)
-            user_profile.save()
+            user_profile, created = UserProfile.objects.get_or_create(user=user) # modified line
+            if created:
+                # If you need to initialize any fields when the UserProfile is first created, do so here
+                # user_profile.field = value
+                user_profile.save()
             messages.success(request, 'Account created successfully!')
             return redirect('home')
 
@@ -340,16 +343,17 @@ def test(request):
     user_profile = UserProfile.objects.get(user=request.user)
 
     # Instantiate StudentModel with data from user_profile and answered_questions
+
     student_model = StudentModel(
-        user.id, 
-        user_profile.history, 
-        user_profile.remaining_question_ids,
-        user_profile.diagnostic_test_ids,
-        user_profile.mastered_components,
-        user_profile.inappropriate_components,
-        user_profile.model,
-        user_profile.in_diagnostic,
-        user_profile.in_review
+        student_id=user.id, 
+        student_history=user_profile.history, 
+        remaining_question_ids=user_profile.remaining_question_ids,
+        diagnostic_test_ids=user_profile.diagnostic_test_ids,
+        mastered_components=user_profile.mastered_components,
+        inappropriate_components=user_profile.inappropriate_components,
+        model=user_profile.model,
+        in_diagnostic=user_profile.in_diagnostic,
+        in_review=user_profile.in_review
     )
 
     # Get the next question based on the student model

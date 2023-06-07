@@ -13,6 +13,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         form.base_fields['mastered_components'].required = False
         form.base_fields['inappropriate_components'].required = False
         form.base_fields['diagnostic_test_ids'].required = False
+        form.base_fields['remaining_question_ids'].required = False
         return form
 
 class UserAnswerAdmin(admin.ModelAdmin):
