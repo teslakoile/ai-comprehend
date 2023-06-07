@@ -462,7 +462,7 @@ def update_user_answer(request):
                 'question_id': int(question_id),
                 'correct': int(is_correct)
             })
-            user_profile.save()
+            # user_profile.save()
         
 
         return JsonResponse({'message': 'UserAnswer updated'}, status=200)

@@ -52,7 +52,7 @@
 </script>
 <div class="test-content">
     <button id="exit-btn" onclick="handleExitClick()" class="exit-btn">X</button>
-    <h3>Question {{ history|length|add:"1" }}/{{ questions_count }}</h3>
+    <h3 id="question-count">Question {{ history|length|add:"1" }}/{{ questions_count }}</h3>
     <p id="passage">{{ question.passage }}</p>
 
   <!-- <h3>Question:</h3> -->
@@ -267,6 +267,7 @@ function updateUserAnswer(questionId, selectedAnswer) {
     xhttp.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
             console.log("UserAnswer updated");
+            
         } else if (this.readyState === 4) {
             console.log("Error updating UserAnswer");
         }
