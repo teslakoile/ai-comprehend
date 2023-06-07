@@ -260,7 +260,8 @@ def next_question(request):
         print("user_profile.history: ", user_profile.history)
         print("saving history")
         try:
-            user_profile.save()
+            
+            # user_profile.save()
             print("user_profile saved in next question")
         except ValidationError as e:
             print("user_profile not saved in next question")
