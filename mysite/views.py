@@ -204,7 +204,7 @@ class StudentModel:
             self.remaining_question_ids = [i['id'] for i in MASTER_DATA]
             next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
         elif self.in_diagnostic and len(self.mastered_components) == 3:
-            next_question_id = self.diagnostic_ids[[i for i in self.student_history[9:] if i['question_id'] in self.diagnostic_ids]]
+            next_question_id = self.diagnostic_ids[len([i for i in self.student_history[9:] if i['question_id'] in self.diagnostic_ids])]
         elif self.in_diagnostic:
             print("self.diagnostic_ids: ", self.diagnostic_ids)
             print("self.recent_history: ", self.recent_history)
