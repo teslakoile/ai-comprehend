@@ -194,9 +194,9 @@ class StudentModel:
         if len(self.mastered_components) == 3:
             self.in_diagnostic = True
 
-        if self.in_diagnostic and len(self.recent_history) == 9:
+        if self.in_diagnostic and len(self.recent_history) == 8:
             self.in_diagnostic = False
-            next_question_id = self.diagnostic_ids[len(self.recent_history - 1)]
+            next_question_id = self.diagnostic_ids[len(self.recent_history)]
             shuffle(self.diagnostic_ids)
         elif self.in_diagnostic and len([i for i in self.student_history if i['question_id'] in self.diagnostic_ids]) == 18:
             self.in_diagnostic = False
@@ -245,46 +245,45 @@ class StudentModel:
                self.inappropriate_components, self.model, self.in_diagnostic, self.in_review
     
 @login_required
-def next_question(request):
-    user = request.user
-    user_profile = UserProfile.objects.get(user=user)
-    if not user_profile.history:  # if history is empty, generate it from UserAnswer
-        user_answers = UserAnswer.objects.filter(user=user)
-        # user_history = []
-        # for answer in user_answers:
-        #     user_history.append({
-        #         'correct': int(answer.correct),
-        #         'question_id': answer.question.id
-        #     })
-        user_profile.history = user_history
-        print("user_profile.history: ", user_profile.history)
-        print("saving history")
-        try:
+# def next_question(request):
+#     user = request.user
+#     user_profile = UserProfile.objects.get(user=user)
+#     if not user_profile.history:  # if history is empty, generate it from UserAnswer
+#         user_answers = UserAnswer.objects.filter(user=user)
+#         user_history = []
+#         for answer in user_answers:
+#             user_history.append({
+#                 'correct': int(answer.correct),
+#                 'question_id': answer.question.id
+#             })
+#         user_profile.history = user_history
+#         print("user_profile.history: ", user_profile.history)
+#         print("saving history")
+#         try:
+#             user_profile.save()
+#             print("user_profile saved in next question")
+#         except ValidationError as e:
+#             print("user_profile not saved in next question")
             
-            # user_profile.save()
-            print("user_profile saved in next question")
-        except ValidationError as e:
-            print("user_profile not saved in next question")
-            
-    else:  # if history exists, load it from UserProfile
-        user_history = user_profile.history
+#     else:  # if history exists, load it from UserProfile
+#         user_history = user_profile.history
 
-    if len(user_history):
-        student_model = StudentModel(student_id=user.id, student_history=user_history)
-    else:
-        student_model = StudentModel(student_id=user.id, student_history=user_history,
-                                     remaining_question_ids=user_profile.remaining_question_ids,
-                                     diagnostic_test_ids=user_profile.diagnostic_test_ids,
-                                     mastered_components=user_profile.mastered_components,
-                                     inappropriate_components=user_profile.inappropriate_components,
-                                     model=user_profile.model,
-                                     in_diagnostic=user_profile.in_diagnostic, in_review=user_profile.in_review)
+#     if len(user_history):
+#         student_model = StudentModel(student_id=user.id, student_history=user_history)
+#     else:
+#         student_model = StudentModel(student_id=user.id, student_history=user_history,
+#                                      remaining_question_ids=user_profile.remaining_question_ids,
+#                                      diagnostic_test_ids=user_profile.diagnostic_test_ids,
+#                                      mastered_components=user_profile.mastered_components,
+#                                      inappropriate_components=user_profile.inappropriate_components,
+#                                      model=user_profile.model,
+#                                      in_diagnostic=user_profile.in_diagnostic, in_review=user_profile.in_review)
         
-    next_question_id = student_model.model_response()[0]
-    print("next question id")
-    print(next_question_id)
+#     next_question_id = student_model.model_response()[0]
+#     print("next question id")
+#     print(next_question_id)
 
-    return JsonResponse({'next_question_id': next_question_id})
+#     return JsonResponse({'next_question_id': next_question_id})
 
 
 @login_required
@@ -460,13 +459,13 @@ def update_user_answer(request):
         user_profile = UserProfile.objects.get(user=request.user)
 
         # Update fields
-        if not any(item['question_id'] == int(question_id) for item in user_profile.history):
+        # if not any(item['question_id'] == int(question_id) for item in user_profile.history):
             # Update fields
-            user_profile.history.append({
-                'question_id': int(question_id),
-                'correct': int(is_correct)
-            })
-            # user_profile.save()
+        user_profile.history.append({
+            'question_id': int(question_id),
+            'correct': int(is_correct)
+        })
+        user_profile.save()
         
 
         return JsonResponse({'message': 'UserAnswer updated'}, status=200)

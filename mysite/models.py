@@ -41,12 +41,12 @@ class UserAnswer(models.Model):
     correct = models.BooleanField(default=False)
     submission_time = models.DateTimeField(default=timezone.now)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  # Call the "real" save() method.
-        user_profile = UserProfile.objects.get(user=self.user)
-        history_entry = {"question_id": self.question.id, "correct": int(self.correct)}
-        user_profile.history.append(history_entry)
-        user_profile.save()
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)  # Call the "real" save() method.
+    #     user_profile = UserProfile.objects.get(user=self.user)
+    #     history_entry = {"question_id": self.question.id, "correct": int(self.correct)}
+    #     user_profile.history.append(history_entry)
+    #     user_profile.save()
 
     class Meta:
         unique_together = ('user', 'question')
