@@ -173,8 +173,10 @@ class StudentModel:
                       'inferential': np.clip(log_res.predict_proba(inferential_data)[0][1], 0.01, 0.99),
                       'critical': np.clip(log_res.predict_proba(critical_data)[0][1], 0.01, 0.99)}
 
-        self.mastered_components = [i for i in prediction if
-                                    (prediction[i] > 0.8 and i not in self.mastered_components) or i in self.mastered_components]
+        if len(self.recent_history) > 20:
+                    self.mastered_components = [i for i in prediction if
+                                                (prediction[i] > 0.8 and i not in self.mastered_components) or i in self.mastered_components]
+                    
         self.inappropriate_components = [i for i in prediction if
                                          (prediction[i] < 0.2 and i != 'literal' or i in self.inappropriate_components) and i not in self.mastered_components]
 
