@@ -185,7 +185,7 @@ class StudentModel:
 
     def model_response(self):
 
-        if len(self.recent_history) == 0:
+                if len(self.recent_history) == 0:
             self.in_diagnostic = True
 
         if self.model == '1':
@@ -193,20 +193,22 @@ class StudentModel:
         elif self.model == '2':
             prediction = self.log_res_vanilla()
 
-        if len(self.mastered_components) == 3:
+        if len(self.mastered_components) == 3 and not self.in_review:
             self.in_diagnostic = True
 
         if self.in_diagnostic and len(self.recent_history) == 8:
             self.in_diagnostic = False
             next_question_id = self.diagnostic_ids[len(self.recent_history)]
             shuffle(self.diagnostic_ids)
-        elif self.in_diagnostic and len([i for i in self.student_history if i['question_id'] in self.diagnostic_ids]) == 18:
+        elif self.in_diagnostic and len(
+                [i for i in (self.student_history[:9] + self.student_history[-9:]) if i['question_id'] in self.diagnostic_ids]) == 18:
             self.in_diagnostic = False
             self.in_review = True
-            self.remaining_question_ids = [i['id'] for i in MASTER_DATA]
+            self.remaining_question_ids = [i['id'] for i in MASTER_DATA if i['id'] not in self.diagnostic_ids]
             next_question_id = self.remaining_question_ids.pop(choice(self.remaining_question_ids))
         elif self.in_diagnostic and len(self.mastered_components) == 3:
-            next_question_id = self.diagnostic_ids[len([i for i in self.student_history[9:] if i['question_id'] in self.diagnostic_ids])]
+            next_question_id = self.diagnostic_ids[
+                len([i for i in self.student_history[-9:] if i['question_id'] in self.diagnostic_ids])]
         elif self.in_diagnostic:
             print("self.diagnostic_ids: ", self.diagnostic_ids)
             print("self.recent_history: ", self.recent_history)
@@ -221,16 +223,16 @@ class StudentModel:
 
             # remove mastered components and inappropriate components from expectation
             if len(set(self.inappropriate_components) - set(self.mastered_components)):
-                expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components and i not in self.inappropriate_components}
+                expectation = {i: expectation[i] for i in expectation if
+                               i not in self.mastered_components and i not in self.inappropriate_components}
             else:
                 expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components}
 
             next_question_kc = max(expectation, key=expectation.get)
 
             # get a random question id from the remaining questions ids
-            next_question_id = choice(
-                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
-            self.remaining_question_ids.remove(next_question_id)
+            next_question_id = self.remaining_question_ids.pop(choice(
+                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
 
         print("Student ID: {}".format(self.student_id))
         print("Student History: {}".format(self.student_history))
