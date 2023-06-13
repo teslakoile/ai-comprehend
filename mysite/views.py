@@ -224,7 +224,7 @@ class StudentModel:
             # remove mastered components and inappropriate components from expectation
             if len(set(self.inappropriate_components) - set(self.mastered_components)):
                 expectation = {i: expectation[i] for i in expectation if
-                               i not in self.mastered_components and i not in self.inappropriate_components}
+                                i not in self.mastered_components and i not in self.inappropriate_components}
             else:
                 expectation = {i: expectation[i] for i in expectation if i not in self.mastered_components}
 
@@ -246,8 +246,8 @@ class StudentModel:
         print("Model: {}".format(self.model))
 
         return next_question_id, self.student_parameters, self.remaining_question_ids, self.diagnostic_ids, self.mastered_components,\
-               self.inappropriate_components, self.model, self.in_diagnostic, self.in_review
-    
+            self.inappropriate_components, self.model, self.in_diagnostic, self.in_review
+            
 @login_required
 # def next_question(request):
 #     user = request.user
