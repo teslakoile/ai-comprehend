@@ -234,6 +234,7 @@ class StudentModel:
             # next_question_id = self.remaining_question_ids.pop(choice(
             #     [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
             print("here in else")
+            print("next_question_kc: ", next_question_kc)
             next_question_id = choice(
                 [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
             print("next_question_id: ", next_question_id)
