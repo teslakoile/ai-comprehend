@@ -185,7 +185,7 @@ class StudentModel:
 
     def model_response(self):
 
-                if len(self.recent_history) == 0:
+        if len(self.recent_history) == 0:
             self.in_diagnostic = True
 
         if self.model == '1':
