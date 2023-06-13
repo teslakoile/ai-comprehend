@@ -231,8 +231,15 @@ class StudentModel:
             next_question_kc = max(expectation, key=expectation.get)
 
             # get a random question id from the remaining questions ids
-            next_question_id = self.remaining_question_ids.pop(choice(
-                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
+            # next_question_id = self.remaining_question_ids.pop(choice(
+            #     [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
+            print("here in else")
+            next_question_id = choice(
+                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
+            print("next_question_id: ", next_question_id)
+            print("remaining_question_ids before: ", self.remaining_question_ids)
+            self.remaining_question_ids.remove(next_question_id)
+            print("remaining_question_ids after: ", self.remaining_question_ids)
 
         print("Student ID: {}".format(self.student_id))
         print("Student History: {}".format(self.student_history))
