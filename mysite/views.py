@@ -235,8 +235,13 @@ class StudentModel:
             #     [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
             print("here in else")
             print("next_question_kc: ", next_question_kc)
-            next_question_id = choice(
-                [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc])
+            try:
+                next_question_id = self.remaining_question_ids.pop(choice(
+                    [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
+            except IndexError:
+                self.remaining_question_ids.append(i['id'] for i in MASTER_DATA if i['knowledge_component'] == next_question_kc)
+                next_question_id = self.remaining_question_ids.pop(choice(
+                    [i for i in self.remaining_question_ids if MASTER_DATA[i]['knowledge_component'] == next_question_kc]))
             print("next_question_id: ", next_question_id)
             print("remaining_question_ids before: ", self.remaining_question_ids)
             self.remaining_question_ids.remove(next_question_id)
